@@ -55,27 +55,38 @@ class AppWindow(AppWindowBase):
 
             # The last condition excludes mouse positions above the first line
             # (in this case, the hit test is BEYOND and the row points to the last line)
-            if hit != wx.TE_HT_UNKNOWN and row != self.drag_curr_row and \
+            if hit != wx.TE_HT_UNKNOWN and \
+                (row < self.drag_curr_row or row > self.drag_curr_row + 1) and \
                 (row < tasks_view.GetNumberOfLines()-1 or hit != wx.TE_HT_BEYOND):
 
                 # print(f"Dragging, cur = {self.drag_curr_row}, new = {row}, hit = {hit}")
 
                 # calculating the exact insertion position based off mid-row pos
                 # TODO: it appears to be a 'mission impossible' for the moment
+                # Buffer.GetRangeSize() might be of help, if we find a way to supply 
+                # the DC and drawing context
 
                 curr_row = self.drag_curr_row
                 line_length = tasks_view.GetLineLength(curr_row)
                 range = wx.richtext.RichTextRange(tasks_view.XYToPosition(0, curr_row),
-                    tasks_view.XYToPosition(line_length + 1, curr_row))
-
-                line = tasks_view.GetRange(range.Start, range.End)
-                if line[-1:] != "\n":
-                    line += "\n"
+                    tasks_view.XYToPosition(line_length, curr_row))
 
                 tasks_view.Freeze()
                 tasks_view.BeginSuppressUndo()
 
-                tasks_view.Delete(range)
+                buf = tasks_view.Buffer
+                # para = buf.GetParagraphAtLine(curr_row)
+                field = buf.GetLeafObjectAtPosition(range.GetStart())
+                # TODO: make sure it's a field. If not, what to do? cancel drag?
+                if type(field) is wx._richtext.RichTextField:
+                    props = field.GetProperties()
+                    print(f"{props.GetProperty('task_id')}")
+
+                container = wx.richtext.RichTextParagraphLayoutBox()
+                buf.CopyFragment(range, container)
+                # print(f"Copy: {range}")
+                # print(f"CopyFragment = {res}")
+                buf.DeleteRange(range)
 
                 # TODO: do we need to account for line numbers shift after Delete() ?
                 # - yes, otherwise it will jump around. Doc it in a comment.
@@ -84,9 +95,11 @@ class AppWindow(AppWindowBase):
                 if (row > curr_row):
                     row -= 1
 
-                tasks_view.SetInsertionPoint(tasks_view.XYToPosition(0, row))
-                tasks_view.WriteText(line)
-                tasks_view.SetSelection(tasks_view.XYToPosition(0, row), tasks_view.XYToPosition(len(line) - 1, row))
+                # buf.InsertFragment(tasks_view.XYToPosition(0, row), container)
+                # print(f"Insert at: {tasks_view.XYToPosition(0, row)}")
+                buf.InsertParagraphsWithUndo(tasks_view.XYToPosition(0, row), container, tasks_view, 0)
+                buf.InvalidateHierarchy(range)
+                tasks_view.SetSelection(tasks_view.XYToPosition(0, row), tasks_view.XYToPosition(range.GetLength() - 1, row))
 
                 tasks_view.EndSuppressUndo()
                 tasks_view.Thaw()
@@ -156,13 +169,18 @@ class MyApp(wx.App):
         tasks_view.Delete(wx.richtext.RichTextRange(0, 1))
         tasks_view.AddParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
+        # wx.richtext.RichTextBuffer.AddFieldType(wx.richtext.RichTextFieldTypeStandard("task-label", "1 day", wx.richtext.RichTextFieldTypeStandard.RICHTEXT_FIELD_STYLE_NO_BORDER))
         wx.richtext.RichTextBuffer.AddFieldType(wx.richtext.RichTextFieldTypeStandard("task-label", "1 day"))
 
         for i in range(0, 100):
-            # tasks_view.AddParagraph(f"test - line {i}")
+            r = tasks_view.AddParagraph(f"test - line {i}")
+            tasks_view.SetInsertionPoint(r.GetStart())
             # field_type = wx.richtext.RichTextFieldTypeStandard()
-            tasks_view.WriteField("task-label", wx.richtext.RichTextProperties())
-            tasks_view.WriteText(f"test - line {i}\n")
+            props = wx.richtext.RichTextProperties()
+            props.SetProperty("task_id", i)
+            field = tasks_view.WriteField("task-label", props)
+            # field.task_id = i
+            # tasks_view.WriteText(f"test - line {i}\n")
 
 
         tasks_view.SetCaretPosition(-1, True)
