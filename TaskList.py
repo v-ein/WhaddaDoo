@@ -3,73 +3,14 @@ import sys
 from   random import choice
 import wx
 
-# class MyFrame
-# class MyDragList
-# class MyListDrop
-# class MyApp
-
-#---------------------------------------------------------------------------
-
-# items = ['Foo', 'Bar', 'Baz', 'Zif', 'Zaf', 'Zof']
-
-# #---------------------------------------------------------------------------
-
-# class MyFrame(wx.Frame):
-#     def __init__(self, parent, id):
-#         wx.Frame.__init__(self, parent, id,
-#                           "Sample one",
-#                           size=(450, 295))
-
-#         #------------
-
-#         self.SetIcon(wx.Icon('icons/wxwin.ico'))
-#         self.SetMinSize((450, 295))
-
-#         #------------
-
-#         dl1 = MyDragList(self, style=wx.LC_LIST)
-#         dl1.SetBackgroundColour("#e6ffd0")
-
-#         dl2 = MyDragList(self, style=wx.LC_REPORT)
-#         dl2.InsertColumn(0, "Column - 0", wx.LIST_FORMAT_LEFT)
-#         dl2.InsertColumn(1, "Column - 1", wx.LIST_FORMAT_LEFT)
-#         dl2.InsertColumn(2, "Column - 2", wx.LIST_FORMAT_LEFT)
-#         dl2.SetBackgroundColour("#f0f0f0")
-
-#         maxs = -sys.maxsize - 1
-
-#         for item in items:
-#             dl1.InsertItem(maxs, item)
-#             idx = dl2.InsertItem(maxs, item)
-#             dl2.SetItem(idx, 1, choice(items))
-#             dl2.SetItem(idx, 2, choice(items))
-
-#         #------------
-
-#         sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-#         sizer.Add(dl1, proportion=1, flag=wx.EXPAND)
-#         sizer.Add(dl2, proportion=1, flag=wx.EXPAND)
-
-#         self.SetSizer(sizer)
-#         self.Layout()
-
-#---------------------------------------------------------------------------
 
 class TaskList(wx.grid.Grid):
     def __init__(self, *arg, **kw):
         super().__init__(*arg, **kw)
 
-        #------------
+        self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.on_begin_drag)
+        self.SetDropTarget(TaskListDropTarget(self))
 
-        self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.StartDrag)
-
-        #------------
-
-        dt = TaskListDropTarget(self)
-        self.SetDropTarget(dt)
-
-    #-----------------------------------------------------------------------
 
     def GetItemInfo(self, idx):
         """
@@ -85,45 +26,87 @@ class TaskList(wx.grid.Grid):
         return l
 
 
-    def StartDrag(self, event):
+    def on_begin_drag(self, event):
         """
         Put together a data object for drag-and-drop _from_ this list.
         """
 
-        l = []
-        for block in self.GetSelectedRowBlocks():
-            for i in range(block.GetTopRow(), block.GetBottomRow() + 1):
-                l.append(self.GetItemInfo(i))
+        drag_data = {}
+        # drag_data["source_id"] = self.GetID()
 
-        # Pickle the items list.
-        itemdata = pickle.dumps(l, 1)
-        # Create our own data format and use it
-        # in a Custom data object.
-        ldata = wx.CustomDataObject("TaskListItems")
-        ldata.SetData(itemdata)
+        sel_row_blocks = self.GetSelectedRowBlocks()
+        # drag_data["row_blocks"] = sel_row_blocks
+
+        items = []
+        for block in sel_row_blocks:
+            for i in range(block.GetTopRow(), block.GetBottomRow() + 1):
+                items.append(self.GetCellValue(i, 0))
+        drag_data["items"] = items
+        print(f"{items} {items[0]}")
+
+        # TODO: maybe use JSON instead of pickle for security reasons
+        pickled_data = pickle.dumps(drag_data, 4)
+        # Create our own data format and use it in a custom data object
+        data_obj = wx.CustomDataObject("TaskListItems")
+        data_obj.SetData(pickled_data)
+        # TODO: do we really need a composite object? Why no just put data_obj
+        # into the drag source?
         # Now make a data object for the  item list.
-        data = wx.DataObjectComposite()
-        data.Add(ldata)
+        composite = wx.DataObjectComposite()
+        composite.Add(data_obj)
+
+        # We need to detect whether we're dropping to the same list where the
+        # items originated. It's a dirty trick but I couldn't quickly find a better way.
+        self.drop_ins_pos = None
 
         # Create drop source and begin drag-and-drop.
-        dropSource = wx.DropSource(self)
-        dropSource.SetData(data)
-        res = dropSource.DoDragDrop(flags=wx.Drag_DefaultMove)
+        drag_source = wx.DropSource(self)
+        drag_source.SetData(composite)
+        res = drag_source.DoDragDrop(flags=wx.Drag_DefaultMove)
 
-        # If move, we want to remove the item from this list.
-        if res == wx.DragMove:
+        # if self.drop_ins_pos is not None:
+
+        # If there was no drop into this list (i.e. dragging to another list),
+        # there's no need to correct positions on deleteion - we're preventing this by
+        # using an insertion point beyond the end of list.
+        ins_pos = self.drop_ins_pos if self.drop_ins_pos is not None else self.GetNumberRows()
+        self.delete_dragged_items(sel_row_blocks, ins_pos, len(items))
+
+        # If a move has been requested, we want to remove the source rows from this list.
+        # For now, we always do a 'move' drag'n'drop. We might need a 'copy' method
+        # within the single list later (e.g. to duplicate tasks - but only in the backlog list).
+
+        # for block in sel_row_blocks:
+            # If we're dropping to the same list, we need to correct the row indices
+            # below the insertion point
+        # if res == wx.DragMove:
             # It's possible we are dragging/dropping from this list to this list.
             # In which case, the index we are removing may have changed...
 
             # Find correct position.
-            l.reverse() # Delete all the items, starting with the last item.
+            # l.reverse() # Delete all the items, starting with the last item.
             # TODO: this should be different for Grid
             # for i in l:
             #     pos = self.FindItem(i[0], i[2])
             #     self.DeleteItem(pos)
 
+    # TODO: PEP 8 here around =0
+    def delete_dragged_items(self, row_blocks, ins_pos = 0, ins_len = 0):
 
-    def Insert(self, x, y, seq):
+        # Going through the row blocks bottom-up and deleting them
+        for block in reversed(row_blocks):
+            # If we're dropping items to the same list, we need to correct
+            # the row indices below the insertion point
+            # TODO: this is not going to work if we drop the rows in the middle
+            # of a row block. We need to handle this on a per-row basis, or maybe
+            # split each block
+            start = block.TopRow
+            if start >= ins_pos:
+                start += ins_len
+            self.DeleteRows(start, block.BottomRow - block.TopRow + 1)
+
+
+    def insert_dropped_items(self, x, y, items):
         """
         Insert text at given x, y coordinates --- used with drag-and-drop.
         """
@@ -135,7 +118,8 @@ class TaskList(wx.grid.Grid):
         cell_coords = self.XYToCell(x, y)
 
         if cell_coords == wx.NOT_FOUND: # Not clicked on an item.
-            # TODO: what here??
+            # TODO: what here?? we need to decide whether it was dropped above
+            # the first row or below the last one
             cell_coords = wx.grid.GridCellCoords(0, 0)
 
             # if flags & (wx.LIST_HITTEST_NOWHERE|wx.LIST_HITTEST_ABOVE|wx.LIST_HITTEST_BELOW): # Empty list or below last item.
@@ -157,49 +141,43 @@ class TaskList(wx.grid.Grid):
         #     if y > rect.y - self.GetItemRect(0).y + rect.height/2:
         #         index += 1
 
+
         index = cell_coords.GetRow()
-        self.InsertRows(index, len(seq))
+        
+        # Remember that we got a drop at this position. This might be
+        # important if we're dragging items from the same list.
+        self.drop_ins_pos = index
 
-        # TODO: fill in the cells
-        # for i in seq: # Insert the item data.
+        # TODO: maybe block repainting
+        self.InsertRows(index, len(items))
 
-        #     idx = self.InsertItem(index, i[2])
-        #     self.SetItemData(idx, i[1])
-        #     for j in range(1, self.GetColumnCount()):
-        #         try: # Target list can have more columns than source.
-        #             self.SetItem(idx, j, i[2+j])
-        #         except:
-        #             pass # Ignore the extra columns.
-        #     index += 1
+        for item in items:
+            self.SetCellValue(index, 0, item)
+            self.AutoSizeRow(index)
+            index += 1
 
-#---------------------------------------------------------------------------
 
 class TaskListDropTarget(wx.DropTarget):
     """
     Drop target for the task list.
     """
-    def __init__(self, source):
+    def __init__(self, target_list_):
         """
         Arguments:
         source: source listctrl.
         """
         super().__init__()
 
-        #------------
-
-        self.dv = source
-
-        #------------
+        self.target_list = target_list_
 
         # Specify the type of data we will accept.
         self.data = wx.CustomDataObject("TaskListItems")
         self.SetDataObject(self.data)
 
-    #-----------------------------------------------------------------------
 
     # Called when OnDrop returns True.
     # We need to get the data and do something with it.
-    def OnData(self, x, y, d):
+    def OnData(self, x, y, defResult):
         """
         ...
         """
@@ -207,11 +185,11 @@ class TaskListDropTarget(wx.DropTarget):
         # Copy the data from the drag source to our data object.
         if self.GetData():
             # Convert it back to a list and give it to the viewer.
-            ldata = self.data.GetData()
-            l = pickle.loads(ldata)
-            self.dv.Insert(x, y, l)
+            pickled_data = self.data.GetData()
+            drag_data = pickle.loads(pickled_data)
+            self.target_list.insert_dropped_items(x, y, drag_data.get("items", []))
 
         # What is returned signals the source what to do
         # with the original data (move, copy, etc.)  In this
         # case we just return the suggested value given to us.
-        return d
+        return defResult
