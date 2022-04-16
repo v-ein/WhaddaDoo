@@ -8,6 +8,7 @@ class AppWindow(AppWindowBase):
 
         self.grid_tasks.HideRowLabels()
         self.grid_tasks.HideColLabels()
+        self.grid_tasks.EnableDragCell()
         self.grid_tasks.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         # This editor is a bit cumbersome when it comes to adding a lot of text to a 
         # single-line cell, but that's what we probably have to put up with for now.
@@ -17,9 +18,11 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_tasks_size)
 
         self.drag_start = None
+        self.is_dragging = False
 
         # self.rtc_tasks.Bind(wx.EVT_LEFT_DOWN, self.on_rtc_tasks_mouse_down)
-        # self.rtc_tasks.Bind(wx.EVT_MOTION, self.on_rtc_tasks_mouse_move)
+        # self.grid_tasks.Bind(wx.EVT_MOTION, self.on_grid_tasks_mouse_move)
+        # self.grid_tasks.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.on_grid_tasks_cell_begin_drag)
 
     def on_rtc_tasks_mouse_down(self, event):
         # hit, col, row = self.rtc_tasks.HitTestXY(event.GetPosition())
@@ -31,72 +34,18 @@ class AppWindow(AppWindowBase):
         #     self.drag_start = None
         event.Skip()
 
-    def on_rtc_tasks_mouse_move(self, event):
-        if event.Dragging() and self.drag_start is not None:
-            # TODO: if the starting direction is not vertical, allow
-            # the regular selection mechanism to fire
-            tasks_view = self.rtc_tasks
-            # TODO: we can move the insertion point to mid-line if
-            # we add (or subtract?) half a line height here before doing the hit test
-            hit, col, row = tasks_view.HitTestXY(event.GetPosition())
+    def on_grid_tasks_cell_begin_drag(self, event):
+        print("Cell dragging begins!")
+        for block in self.grid_tasks.GetSelectedRowBlocks():
+            print(f"{block.GetTopRow()} - {block.GetBottomRow()}")
+        self.is_dragging = True
+        event.Skip()
+        # return False
 
-            # The last condition excludes mouse positions above the first line
-            # (in this case, the hit test is BEYOND and the row points to the last line)
-            if hit != wx.TE_HT_UNKNOWN and \
-                (row < self.drag_curr_row or row > self.drag_curr_row + 1) and \
-                (row < tasks_view.GetNumberOfLines()-1 or hit != wx.TE_HT_BEYOND):
-
-                # print(f"Dragging, cur = {self.drag_curr_row}, new = {row}, hit = {hit}")
-
-                # calculating the exact insertion position based off mid-row pos
-                # TODO: it appears to be a 'mission impossible' for the moment
-                # Buffer.GetRangeSize() might be of help, if we find a way to supply 
-                # the DC and drawing context
-
-                curr_row = self.drag_curr_row
-                line_length = tasks_view.GetLineLength(curr_row)
-                range = wx.richtext.RichTextRange(tasks_view.XYToPosition(0, curr_row),
-                    tasks_view.XYToPosition(line_length, curr_row))
-
-                tasks_view.Freeze()
-                tasks_view.BeginSuppressUndo()
-
-                buf = tasks_view.Buffer
-                # para = buf.GetParagraphAtLine(curr_row)
-                field = buf.GetLeafObjectAtPosition(range.GetStart())
-                # TODO: make sure it's a field. If not, what to do? cancel drag?
-                if type(field) is wx._richtext.RichTextField:
-                    props = field.GetProperties()
-                    print(f"{props.GetProperty('task_id')}")
-
-                container = wx.richtext.RichTextParagraphLayoutBox()
-                buf.CopyFragment(range, container)
-                # print(f"Copy: {range}")
-                # print(f"CopyFragment = {res}")
-                buf.DeleteRange(range)
-
-                # TODO: do we need to account for line numbers shift after Delete() ?
-                # - yes, otherwise it will jump around. Doc it in a comment.
-                # TODO: with the current implementation, there's no chance to
-                # move a task to the very end since we always insert *before* a task
-                if (row > curr_row):
-                    row -= 1
-
-                # buf.InsertFragment(tasks_view.XYToPosition(0, row), container)
-                # print(f"Insert at: {tasks_view.XYToPosition(0, row)}")
-                buf.InsertParagraphsWithUndo(tasks_view.XYToPosition(0, row), container, tasks_view, 0)
-                buf.InvalidateHierarchy(range)
-                tasks_view.SetSelection(tasks_view.XYToPosition(0, row), tasks_view.XYToPosition(range.GetLength() - 1, row))
-
-                tasks_view.EndSuppressUndo()
-                tasks_view.Thaw()
-
-                self.drag_curr_row = row
-
-                # TODO: enable undo for the last movement (how? should we disable it after first move?) -> See BatchingUndo()
-                # TODO: refresh the index
-                # TODO: extract a function from here, so that we can handle Ctrl+Up/Down
-
+    def on_grid_tasks_mouse_move(self, event):
+        print("Mouse move")
+        if event.Dragging() and self.is_dragging:
+            print("Dragging a row")
         else:
             event.Skip()
 
