@@ -6,42 +6,29 @@ class AppWindow(AppWindowBase):
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
 
-        # self.grid_tasks.HideRowLabels()
-        # self.grid_tasks.HideColLabels()
-        # self.grid_tasks.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
-        # # This editor is a bit cumbersome when it comes to adding a lot of text to a 
-        # # single-line cell, but that's what we probably have to put up with for now.
-        # self.grid_tasks.SetDefaultEditor(wx.grid.GridCellAutoWrapStringEditor())
-        # self.grid_tasks.SetDefaultCellFont(wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI"))
+        self.grid_tasks.HideRowLabels()
+        self.grid_tasks.HideColLabels()
+        self.grid_tasks.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
+        # This editor is a bit cumbersome when it comes to adding a lot of text to a 
+        # single-line cell, but that's what we probably have to put up with for now.
+        self.grid_tasks.SetDefaultEditor(wx.grid.GridCellAutoWrapStringEditor())
+        self.grid_tasks.SetDefaultCellFont(wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI"))
 
-        # self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_tasks_size)
+        self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_tasks_size)
 
         self.drag_start = None
 
-        self.rtc_tasks.Bind(wx.EVT_LEFT_DOWN, self.on_rtc_tasks_mouse_down)
-        self.rtc_tasks.Bind(wx.EVT_MOTION, self.on_rtc_tasks_mouse_move)
+        # self.rtc_tasks.Bind(wx.EVT_LEFT_DOWN, self.on_rtc_tasks_mouse_down)
+        # self.rtc_tasks.Bind(wx.EVT_MOTION, self.on_rtc_tasks_mouse_move)
 
     def on_rtc_tasks_mouse_down(self, event):
-        # hit = 0
-        # pos = None
-        # hitObj = None
-        # sel_task, pos, flags = self.rtc_tasks.FindContainerAtPoint(event.GetPosition(), pos, hit)
-        # if sel_task is not None:
-        #     # print(", ".join(type(i).__name__ for i in sel_task))
-        #     # print("Hit a task! " + sel_task.GetText())
-        #     print(f"Hit a task!")
-
-        # hit, pos = self.rtc_tasks.HitTest(event.GetPosition())
+        # hit, col, row = self.rtc_tasks.HitTestXY(event.GetPosition())
         # if hit != wx.TE_HT_UNKNOWN and hit != wx.TE_HT_BELOW:
-        #     print("Hit a task!")
-
-        hit, col, row = self.rtc_tasks.HitTestXY(event.GetPosition())
-        if hit != wx.TE_HT_UNKNOWN and hit != wx.TE_HT_BELOW:
-            self.drag_start = event.GetPosition()
-            self.drag_curr_row = row
-            # print("Hit a task! " + self.rtc_tasks.GetLineText(row))
-        else:
-            self.drag_start = None
+        #     self.drag_start = event.GetPosition()
+        #     self.drag_curr_row = row
+        #     # print("Hit a task! " + self.rtc_tasks.GetLineText(row))
+        # else:
+        #     self.drag_start = None
         event.Skip()
 
     def on_rtc_tasks_mouse_move(self, event):
@@ -126,7 +113,7 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def on_frame_show(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        # self.resize_grid_columns()
+        self.resize_grid_columns()
         event.Skip()
 
 class MyApp(wx.App):
@@ -140,53 +127,15 @@ class MyApp(wx.App):
         return True
 
     def read_tasks(self):
+        tasks_view = self.frame.grid_tasks
+        # tasks_view.CreateGrid(102, 1)
         # Just some dummy data for now
+        # TODO: is there a Freeze/Undo capability? Should we use it?
+        tasks_view.SetCellValue(0, 0, "First task")
+        tasks_view.SetCellValue(1, 0, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
-        # self.frame.grid_tasks.SetCellValue(0, 0, "First task")
-        # self.frame.grid_tasks.SetCellValue(1, 0, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-
-        # Filling in the rich text control with a test table
-        tasks_view = self.frame.rtc_tasks
-
-        tasks_view.Freeze()
-        tasks_view.BeginSuppressUndo()
-
-        tasks_view.Clear()
-
-        # table = tasks_view.WriteTable(100, 2)
-        # for i in range(0, table.RowCount):
-        #     table.GetCell(i, 1).AddParagraph("test")
-
-        # TODO: use the system text color instead of just black
-        style = wx.TextAttr(wx.Colour(0, 0, 0), 
-            font=wx.Font(wx.Size(0, 14), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI"))
-        style.SetParagraphSpacingAfter(8)
-        style.SetLeftIndent(0, 30)
-        style.SetLineSpacing(8)
-        tasks_view.SetDefaultStyle(style)
-        # tasks_view.BeginLeftIndent(0, 30)
-
-        tasks_view.Delete(wx.richtext.RichTextRange(0, 1))
-        tasks_view.AddParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
-
-        # wx.richtext.RichTextBuffer.AddFieldType(wx.richtext.RichTextFieldTypeStandard("task-label", "1 day", wx.richtext.RichTextFieldTypeStandard.RICHTEXT_FIELD_STYLE_NO_BORDER))
-        wx.richtext.RichTextBuffer.AddFieldType(wx.richtext.RichTextFieldTypeStandard("task-label", "1 day"))
-
-        for i in range(0, 100):
-            r = tasks_view.AddParagraph(f"test - line {i}")
-            tasks_view.SetInsertionPoint(r.GetStart())
-            # field_type = wx.richtext.RichTextFieldTypeStandard()
-            props = wx.richtext.RichTextProperties()
-            props.SetProperty("task_id", i)
-            field = tasks_view.WriteField("task-label", props)
-            # field.task_id = i
-            # tasks_view.WriteText(f"test - line {i}\n")
-
-
-        tasks_view.SetCaretPosition(-1, True)
-
-        tasks_view.EndSuppressUndo()
-        tasks_view.Thaw()
+        for i in range(0, 8):
+            r = tasks_view.SetCellValue(i + 2, 0, f"test - line {i}")
 
         return
 
