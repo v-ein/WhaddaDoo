@@ -2,6 +2,30 @@ from ctypes import resize
 import wx
 from AppGui import AppWindowBase
 
+class TaskLabelFieldType(wx.richtext.RichTextFieldTypeStandard):
+    def __init__(self, *args, **kwds):
+        super().__init__("task-label", "1 day")
+
+    def UpdateField(self, buffer, field):
+        print("In UpdateField")
+        if buffer is not None:
+            print("Has buffer")
+            buffer.Reset()
+            props = field.GetProperties()
+            if props is not None:
+                buffer.WriteText(props.GetProperty('task_id'))
+        else:
+            field.Reset()
+            props = field.GetProperties()
+            if props is not None:
+                field.AddParagraph(str(props.GetProperty('task_id')))
+        return super().UpdateField(buffer, field)
+
+    # def GetLabel(self):
+    #     props = self.GetProperties()
+    #     if props is not None
+    #     print(f"{props.GetProperty('task_id')}")
+
 class AppWindow(AppWindowBase):
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
@@ -20,6 +44,16 @@ class AppWindow(AppWindowBase):
 
         self.rtc_tasks.Bind(wx.EVT_LEFT_DOWN, self.on_rtc_tasks_mouse_down)
         self.rtc_tasks.Bind(wx.EVT_MOTION, self.on_rtc_tasks_mouse_move)
+        self.rtc_tasks.Bind(wx.richtext.EVT_RICHTEXT_DELETE, self.on_rtc_delete)
+
+    def on_rtc_delete(self, event):
+        print(f"{event.GetPosition()} -> {event.GetRange()}")
+        #TODO: check if anything is selected
+        text_obj = self.rtc_tasks.Buffer.GetLeafObjectAtPosition(event.GetPosition())
+        # Allow to delete anything but fields
+        if type(text_obj) is not wx._richtext.RichTextField:
+            print(f"Not a field: {type(text_obj).__name__} {text_obj.GetTextForRange(wx.richtext.RichTextRange(0, 1))}")
+            event.Skip()
 
     def on_rtc_tasks_mouse_down(self, event):
         # hit = 0
@@ -65,6 +99,7 @@ class AppWindow(AppWindowBase):
                 # TODO: it appears to be a 'mission impossible' for the moment
                 # Buffer.GetRangeSize() might be of help, if we find a way to supply 
                 # the DC and drawing context
+                # Or wxRichTextObject.GetRect().
 
                 curr_row = self.drag_curr_row
                 line_length = tasks_view.GetLineLength(curr_row)
@@ -170,7 +205,8 @@ class MyApp(wx.App):
         tasks_view.AddParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
         # wx.richtext.RichTextBuffer.AddFieldType(wx.richtext.RichTextFieldTypeStandard("task-label", "1 day", wx.richtext.RichTextFieldTypeStandard.RICHTEXT_FIELD_STYLE_NO_BORDER))
-        wx.richtext.RichTextBuffer.AddFieldType(wx.richtext.RichTextFieldTypeStandard("task-label", "1 day"))
+        # wx.richtext.RichTextBuffer.AddFieldType(wx.richtext.RichTextFieldTypeStandard("task-label", "1 day"))
+        wx.richtext.RichTextBuffer.AddFieldType(TaskLabelFieldType())
 
         for i in range(0, 100):
             r = tasks_view.AddParagraph(f"test - line {i}")
