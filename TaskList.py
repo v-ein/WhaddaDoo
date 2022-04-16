@@ -12,37 +12,21 @@ class TaskList(wx.grid.Grid):
         self.SetDropTarget(TaskListDropTarget(self))
 
 
-    def GetItemInfo(self, idx):
-        """
-        Collect all relevant data of a listitem, and put it in a list.
-        """
-
-        l = []
-        l.append(idx) # We need the original index, so it is easier to eventualy delete it.
-        # l.append(self.GetItemData(idx)) # Itemdata.
-        # l.append(self.GetItemText(idx)) # Text first column.
-        # for i in range(1, self.GetColumnCount()): # Possible extra columns.
-        #     l.append(self.GetItem(idx, i).GetText())
-        return l
-
-
     def on_begin_drag(self, event):
         """
-        Put together a data object for drag-and-drop _from_ this list.
+        Put together a data object for drag-and-drop _from_ this list, and
+        initiate the drag-and-drop operation.
         """
 
         drag_data = {}
-        # drag_data["source_id"] = self.GetID()
 
         sel_row_blocks = self.GetSelectedRowBlocks()
-        # drag_data["row_blocks"] = sel_row_blocks
 
         items = []
         for block in sel_row_blocks:
             for i in range(block.GetTopRow(), block.GetBottomRow() + 1):
                 items.append(self.GetCellValue(i, 0))
         drag_data["items"] = items
-        print(f"{items} {items[0]}")
 
         # TODO: maybe use JSON instead of pickle for security reasons
         pickled_data = pickle.dumps(drag_data, 4)
@@ -55,8 +39,8 @@ class TaskList(wx.grid.Grid):
         composite = wx.DataObjectComposite()
         composite.Add(data_obj)
 
-        # We need to detect whether we're dropping to the same list where the
-        # items originated. It's a dirty trick but I couldn't quickly find a better way.
+        # We need to detect whether we're dropping to the same list where the items
+        # originated from. It's a dirty trick but I couldn't quickly find a better way.
         self.drop_ins_pos = None
 
         # Create drop source and begin drag-and-drop.
@@ -64,7 +48,9 @@ class TaskList(wx.grid.Grid):
         drag_source.SetData(composite)
         res = drag_source.DoDragDrop(flags=wx.Drag_DefaultMove)
 
-        # if self.drop_ins_pos is not None:
+        # If a move has been requested, we want to remove the source rows from this list.
+        # For now, we always do a 'move' drag'n'drop. We might need a 'copy' method
+        # within the single list later (e.g. to duplicate tasks - but only in the backlog list).
 
         # If there was no drop into this list (i.e. dragging to another list),
         # there's no need to correct positions on deleteion - we're preventing this by
@@ -72,27 +58,12 @@ class TaskList(wx.grid.Grid):
         ins_pos = self.drop_ins_pos if self.drop_ins_pos is not None else self.GetNumberRows()
         self.delete_dragged_items(sel_row_blocks, ins_pos, len(items))
 
-        # If a move has been requested, we want to remove the source rows from this list.
-        # For now, we always do a 'move' drag'n'drop. We might need a 'copy' method
-        # within the single list later (e.g. to duplicate tasks - but only in the backlog list).
 
-        # for block in sel_row_blocks:
-            # If we're dropping to the same list, we need to correct the row indices
-            # below the insertion point
-        # if res == wx.DragMove:
-            # It's possible we are dragging/dropping from this list to this list.
-            # In which case, the index we are removing may have changed...
-
-            # Find correct position.
-            # l.reverse() # Delete all the items, starting with the last item.
-            # TODO: this should be different for Grid
-            # for i in l:
-            #     pos = self.FindItem(i[0], i[2])
-            #     self.DeleteItem(pos)
-
-    # TODO: PEP 8 here around =0
-    def delete_dragged_items(self, row_blocks, ins_pos = 0, ins_len = 0):
-
+    def delete_dragged_items(self, row_blocks, ins_pos=0, ins_len=0):
+        """
+        Delete the specified rows from the list, correcting row positions
+        as necessary for the drag-and-drop insertion that occurred earler.
+        """
         # Going through the row blocks bottom-up and deleting them
         for block in reversed(row_blocks):
             # If we're dropping items to the same list, we need to correct
@@ -111,10 +82,7 @@ class TaskList(wx.grid.Grid):
         Insert text at given x, y coordinates --- used with drag-and-drop.
         """
 
-        # Find insertion point.
-        # index, flags = self.HitTest((x, y))
-
-        # TODO: probably translate x,y to logical coords
+        # Find the insertion point
         cell_coords = self.XYToCell(x, y)
 
         if cell_coords == wx.NOT_FOUND: # Not clicked on an item.
@@ -164,7 +132,7 @@ class TaskListDropTarget(wx.DropTarget):
     def __init__(self, target_list_):
         """
         Arguments:
-        source: source listctrl.
+        target_list_: the target TaskList widget.
         """
         super().__init__()
 
