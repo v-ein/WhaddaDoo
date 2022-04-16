@@ -3,8 +3,14 @@ import wx
 
 
 class TaskList(wx.grid.Grid):
+    drop_placeholder_pos = None
+
     def __init__(self, *arg, **kw):
         super().__init__(*arg, **kw)
+
+        # TODO: maybe use system colors?
+        self.drop_placeholder_attr = wx.grid.GridCellAttr()
+        self.drop_placeholder_attr.SetBackgroundColour(wx.Colour(224, 224, 224))
 
         self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.on_begin_drag)
         self.SetDropTarget(TaskListDropTarget(self))
@@ -121,11 +127,74 @@ class TaskList(wx.grid.Grid):
             self.AutoSizeRow(index)
             index += 1
 
+    def move_drop_placeholder(self, x, y):
+
+        # First see what row the y coord is pointing at
+        # TODO: coords need to be translated!!
+        index = self.YToRow(y)
+        
+        # If it's pointing at the current placeholder position, nothing to do here
+        if index == self.drop_placeholder_pos:
+            return
+
+        self.delete_drop_placeholder()
+
+        # We're not using the index calculated above because the actual insertion
+        # point might be different depending on which grid line is closest to
+        # the mouse position.
+        self.insert_drop_placeholder(self.get_drop_row(x, y))
+
+
+    def insert_drop_placeholder(self, row_pos):
+
+        cursor = self.GetGridCursorCoords()
+        if cursor.Row >= row_pos:
+            cursor.Row += 1
+            self.SetGridCursor(cursor)
+
+        self.InsertRows(row_pos, 1)
+        # Need to copy the attributes object, or otherwise it will get deleted
+        # in C++ when the placeholder is deleted
+        drop_placeholder_attr = wx.grid.GridCellAttr()
+        drop_placeholder_attr.SetBackgroundColour(wx.Colour(224, 224, 224))
+        self.SetRowAttr(row_pos, drop_placeholder_attr)
+        # TODO: placeholder height?
+        self.drop_placeholder_pos = row_pos
+
+
+    def delete_drop_placeholder(self):
+
+        if self.drop_placeholder_pos is None:
+            return
+
+        self.DeleteRows(self.drop_placeholder_pos, 1)
+
+        cursor = self.GetGridCursorCoords()
+        if cursor.Row > self.drop_placeholder_pos:
+            cursor.Row -= 1
+            self.SetGridCursor(cursor)
+
+        self.drop_placeholder_pos = None
+
+
+    def get_drop_row(self, x, y):
+
+        # See what row the y coord is pointing at
+        index = self.YToRow(y, clipToMinMax=True)
+        if index == wx.NOT_FOUND: # Not clicked on an item.
+            # TODO: what here?? we need to decide whether it was dropped above
+            # the first row or below the last one
+            index = 0
+        
+        return index
 
 class TaskListDropTarget(wx.DropTarget):
     """
     Drop target for the task list.
     """
+
+    last_drag_point_y = None
+
     def __init__(self, target_list_):
         """
         Arguments:
@@ -147,11 +216,15 @@ class TaskListDropTarget(wx.DropTarget):
         ...
         """
 
+        # No more caching needed
+        self.last_drag_point_y = -1
+
         # Copy the data from the drag source to our data object.
         if self.GetData():
             # Convert it back to a list and give it to the viewer.
             pickled_data = self.data.GetData()
             drag_data = pickle.loads(pickled_data)
+            self.target_list.delete_drop_placeholder()
             self.target_list.insert_dropped_items(x, y, drag_data.get("items", []))
 
         # What is returned signals the source what to do
@@ -162,4 +235,12 @@ class TaskListDropTarget(wx.DropTarget):
 
     def OnDragOver(self, x, y, defResult):
         # print(f"OnDragOver at {x}, {y}")
+
+        # This handler is called a lot with the same coords, so let's
+        # use some caching to prevent extra processing
+        if y != self.last_drag_point_y:
+            self.last_drag_point_y = y
+            # TODO: we need to remove the placeholder when the drag is cancelled, too
+            self.target_list.move_drop_placeholder(x, y)
+
         return defResult
