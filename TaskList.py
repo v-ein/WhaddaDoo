@@ -87,7 +87,8 @@ class TaskList(wx.grid.Grid):
         """
 
         # Find the insertion point
-        index = self.YToRow(y, clipToMinMax=True)
+        # index = self.YToRow(y, clipToMinMax=True)
+        index = self.get_drop_row(x, y)
 
         if index == wx.NOT_FOUND: # Not clicked on an item.
             # TODO: what here?? we need to decide whether it was dropped above
@@ -137,6 +138,10 @@ class TaskList(wx.grid.Grid):
         if index == self.drop_placeholder_pos:
             return
 
+        # TODO: it's incorrect to determine drop position after deleting the placeholder.
+        # We need to take the placeholder pos into account in get_drop_row(), and
+        # if it returns something different from the current pos, then
+        # delete and re-insert it right away.
         self.delete_drop_placeholder()
 
         # We're not using the index calculated above because the actual insertion
@@ -179,13 +184,17 @@ class TaskList(wx.grid.Grid):
 
     def get_drop_row(self, x, y):
 
+        pt = self.CalcGridWindowUnscrolledPosition(wx.Point(x, y), None)
+
         # See what row the y coord is pointing at
-        index = self.YToRow(y, clipToMinMax=True)
+        index = self.YToRow(pt.y, clipToMinMax=True)
         if index == wx.NOT_FOUND: # Not clicked on an item.
             # TODO: what here?? we need to decide whether it was dropped above
             # the first row or below the last one
             index = 0
-        
+
+        # TODO: we can use CellToRect to find the closest ins pos
+
         return index
 
 class TaskListDropTarget(wx.DropTarget):
