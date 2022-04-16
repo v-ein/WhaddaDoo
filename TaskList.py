@@ -1,6 +1,4 @@
 import pickle
-import sys
-from   random import choice
 import wx
 
 
@@ -83,12 +81,13 @@ class TaskList(wx.grid.Grid):
         """
 
         # Find the insertion point
-        cell_coords = self.XYToCell(x, y)
+        index = self.YToRow(y, clipToMinMax=True)
 
-        if cell_coords == wx.NOT_FOUND: # Not clicked on an item.
+        if index == wx.NOT_FOUND: # Not clicked on an item.
             # TODO: what here?? we need to decide whether it was dropped above
             # the first row or below the last one
-            cell_coords = wx.grid.GridCellCoords(0, 0)
+            index = 0
+            # wx.grid.GridCellCoords(0, 0)
 
             # if flags & (wx.LIST_HITTEST_NOWHERE|wx.LIST_HITTEST_ABOVE|wx.LIST_HITTEST_BELOW): # Empty list or below last item.
             #     index = self.GetItemCount() # Append to end of list.
@@ -110,8 +109,6 @@ class TaskList(wx.grid.Grid):
         #         index += 1
 
 
-        index = cell_coords.GetRow()
-        
         # Remember that we got a drop at this position. This might be
         # important if we're dragging items from the same list.
         self.drop_ins_pos = index
@@ -160,4 +157,9 @@ class TaskListDropTarget(wx.DropTarget):
         # What is returned signals the source what to do
         # with the original data (move, copy, etc.)  In this
         # case we just return the suggested value given to us.
+        return defResult
+
+
+    def OnDragOver(self, x, y, defResult):
+        # print(f"OnDragOver at {x}, {y}")
         return defResult
