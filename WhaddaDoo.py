@@ -6,6 +6,7 @@ class AppWindow(AppWindowBase):
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
 
+        self.grid_tasks.SetGridLineColour(wx.Colour(224, 224, 224))
         self.grid_tasks.SetColLabelValue(0, "Status")
         self.grid_tasks.AutoSizeColLabelSize(0)
         self.grid_tasks.HideRowLabels()
@@ -20,23 +21,8 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_tasks_size)
         self.grid_tasks.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.on_grid_select_cell)
 
-        self.drag_start = None
-        self.is_dragging = False
-
-        # self.rtc_tasks.Bind(wx.EVT_LEFT_DOWN, self.on_rtc_tasks_mouse_down)
-        # self.grid_tasks.Bind(wx.EVT_MOTION, self.on_grid_tasks_mouse_move)
-        # self.grid_tasks.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.on_grid_tasks_cell_begin_drag)
-
-
-    def on_rtc_tasks_mouse_down(self, event):
-        # hit, col, row = self.rtc_tasks.HitTestXY(event.GetPosition())
-        # if hit != wx.TE_HT_UNKNOWN and hit != wx.TE_HT_BELOW:
-        #     self.drag_start = event.GetPosition()
-        #     self.drag_curr_row = row
-        #     # print("Hit a task! " + self.rtc_tasks.GetLineText(row))
-        # else:
-        #     self.drag_start = None
-        event.Skip()
+        self.grid_comments.HideRowLabels()
+        self.grid_comments.HideColLabels()
 
 
     def on_grid_select_cell(self, event):
@@ -45,22 +31,6 @@ class AppWindow(AppWindowBase):
             # Note: we deliberately disallow the grid to handle this event, otherwise
             # it will reset the position to column 0 even after our SetGridCursor call.
             event.Veto()
-        else:
-            event.Skip()
-
-
-    def on_grid_tasks_cell_begin_drag(self, event):
-        print("Cell dragging begins!")
-        for block in self.grid_tasks.GetSelectedRowBlocks():
-            print(f"{block.GetTopRow()} - {block.GetBottomRow()}")
-        self.is_dragging = True
-        event.Skip()
-
-
-    def on_grid_tasks_mouse_move(self, event):
-        print("Mouse move")
-        if event.Dragging() and self.is_dragging:
-            print("Dragging a row")
         else:
             event.Skip()
 

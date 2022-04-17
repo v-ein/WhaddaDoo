@@ -35,6 +35,7 @@ class TaskList(wx.grid.Grid):
         # Any other dashed styles have the same issue.
         # Try to find out why it happens, and maybe fix it in wxWidgets itself.
         pen = wx.Pen(wx.Colour(255, 255, 255), 1, style=wx.PENSTYLE_SOLID)
+        # pen = wx.Pen(wx.Colour(255, 255, 255), 1, style=wx.PENSTYLE_TRANSPARENT)
         return pen
 
     def on_begin_drag(self, event):
@@ -46,11 +47,14 @@ class TaskList(wx.grid.Grid):
         drag_data = {}
 
         sel_row_blocks = self.GetSelectedRowBlocks()
+        if len(sel_row_blocks) == 0:
+            cursor = self.GetGridCursorCoords()
+            sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]
 
         items = []
         for block in sel_row_blocks:
             for i in range(block.GetTopRow(), block.GetBottomRow() + 1):
-                items.append(self.GetCellValue(i, 0))
+                items.append(self.GetCellValue(i, 1))
         drag_data["items"] = items
 
         # TODO: maybe use JSON instead of pickle for security reasons
@@ -147,7 +151,7 @@ class TaskList(wx.grid.Grid):
         self.InsertRows(index, len(items))
 
         for item in items:
-            self.SetCellValue(index, 0, item)
+            self.SetCellValue(index, 1, item)
             self.AutoSizeRow(index)
             index += 1
 
