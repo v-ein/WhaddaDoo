@@ -3,7 +3,12 @@ import wx
 
 
 class TaskList(wx.grid.Grid):
+
+    # A dirty trick to link the drop target to the drag source. We need
+    # some special handling when the source and the target of a drag'n'drop
+    # operation is the same wxGrid control.
     drop_placeholder_pos = None
+    drag_start_row = None
 
     def __init__(self, *arg, **kw):
         super().__init__(*arg, **kw)
@@ -15,6 +20,22 @@ class TaskList(wx.grid.Grid):
         self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.on_begin_drag)
         self.SetDropTarget(TaskListDropTarget(self))
 
+
+    def GetColGridLinePen1(self, col):
+        # pen = wx.Pen(wx.Colour(0, 255, 255), 1, style=wx.PENSTYLE_USER_DASH)
+        # pen.SetDashes([2, 2])
+
+        # TODO: attempts to use PENSTYLE_TRANSPARENT or PENSTYLE_USER_DASH
+        # lead to black lines appearing where the background should be untouched
+        # (e.g. between the dashes). This is definitely not caused by the pen
+        # itself because the wxPen is implemented correctly on Windows, and
+        # does even return PS_NULL for PENSTYLE_TRANSPARENT. The grid itself
+        # probably draws a black line (or leaves a piece of the black background)
+        # before drawing the line with GetColGridLinePen().
+        # Any other dashed styles have the same issue.
+        # Try to find out why it happens, and maybe fix it in wxWidgets itself.
+        pen = wx.Pen(wx.Colour(255, 255, 255), 1, style=wx.PENSTYLE_SOLID)
+        return pen
 
     def on_begin_drag(self, event):
         """
@@ -46,6 +67,8 @@ class TaskList(wx.grid.Grid):
         # We need to detect whether we're dropping to the same list where the items
         # originated from. It's a dirty trick but I couldn't quickly find a better way.
         self.drop_ins_pos = None
+        # TODO: initialize drag_start_row with the row the mouse is pointing at
+        # (probably get it from `event`)
 
         # Create drop source and begin drag-and-drop.
         drag_source = wx.DropSource(self)
@@ -131,7 +154,7 @@ class TaskList(wx.grid.Grid):
     def move_drop_placeholder(self, x, y):
 
         # First see what row the y coord is pointing at
-        # TODO: coords need to be translated!!
+        # TODO: coords need to be translated!! (well, we should use get_drop_row anyway)
         index = self.YToRow(y)
         
         # If it's pointing at the current placeholder position, nothing to do here
@@ -143,6 +166,10 @@ class TaskList(wx.grid.Grid):
         # if it returns something different from the current pos, then
         # delete and re-insert it right away.
         self.delete_drop_placeholder()
+
+        # TODO: if the new position is pointing at drag_start_row (or the next row!),
+        # we should not insert a placeholder. The drag operation should be cancelled
+        # in this case.
 
         # We're not using the index calculated above because the actual insertion
         # point might be different depending on which grid line is closest to
