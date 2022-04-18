@@ -12,6 +12,7 @@ class Epic:
 
 class Task:
 
+    id: str = None
     status: TaskStatus = TaskStatus.ACTIVE
 
     # For convenience, we store the first line of the description separately,

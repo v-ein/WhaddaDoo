@@ -1,8 +1,12 @@
 from ctypes import resize
 import wx
+from impl.task import Task
 from ui.app_gui import AppWindowBase
 
 class AppWindow(AppWindowBase):
+
+    active_tasks = []
+
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
 
@@ -52,8 +56,20 @@ class AppWindow(AppWindowBase):
         
 
     def on_frame_show(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.load_tasks_list()
         self.resize_grid_columns()
         event.Skip()
+
+    def load_tasks_list(self):
+        # TODO: come up with some consistent naming for such cases
+        grid_tasks = self.grid_tasks
+        grid_tasks.DeleteRows(0, grid_tasks.GetNumberRows())
+        grid_tasks.AppendRows(len(self.active_tasks))
+        i = 0
+        for task in self.active_tasks:
+            grid_tasks.SetCellValue(i, 1, task.summary)
+            i += 1
+            pass
 
 
 class MyApp(wx.App):
@@ -71,11 +87,20 @@ class MyApp(wx.App):
         # tasks_view.CreateGrid(102, 1)
         # Just some dummy data for now
         # TODO: is there a Freeze/Undo capability? Should we use it?
-        tasks_view.SetCellValue(0, 1, "First task")
-        tasks_view.SetCellValue(1, 1, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+        # tasks_view.SetCellValue(0, 1, "First task")
+        # tasks_view.SetCellValue(1, 1, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
+        task = Task()
+        task.summary = "First task"
+        self.frame.active_tasks.append(task)
+        task = Task()
+        task.summary = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        self.frame.active_tasks.append(task)
 
         for i in range(0, 8):
-            r = tasks_view.SetCellValue(i + 2, 1, f"test - line {i}")
+            task = Task()
+            task.summary = f"test - line {i}"
+            self.frame.active_tasks.append(task)
+            # r = tasks_view.SetCellValue(i + 2, 1, f"test - line {i}")
 
         attr = wx.grid.GridCellAttr()
         attr.SetReadOnly(True)
