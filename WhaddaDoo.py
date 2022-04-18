@@ -1,6 +1,6 @@
 from ctypes import resize
 import wx
-from AppGui import AppWindowBase
+from ui.app_gui import AppWindowBase
 
 class AppWindow(AppWindowBase):
     def __init__(self, *args, **kwds):
