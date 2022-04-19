@@ -38,7 +38,7 @@ class AppWindowBase(wx.Frame):
         sizer_2 = wx.BoxSizer(wx.VERTICAL)
 
         self.grid_tasks = TaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
-        self.grid_tasks.CreateGrid(10, 2)
+        # self.grid_tasks.CreateGrid(10, 2)
         self.grid_tasks.EnableDragColSize(0)
         self.grid_tasks.EnableDragRowSize(0)
         self.grid_tasks.SetGridLineColour(wx.Colour(224, 224, 224))

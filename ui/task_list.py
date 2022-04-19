@@ -2,6 +2,99 @@ import pickle
 import wx
 
 
+class TaskListTable(wx.grid.GridTableBase):
+
+    # This list may contain elements set to None - e.g. to designate a 
+    # placeholder for a new task, or a temporary cell
+    task_list = []
+
+    # TODO: will we also need the task pool? Or should we serialize the task
+    # entirely on drag'n'drop?
+    # def __init__(self):
+        # super().__init__()
+    
+    def CanMeasureColUsingSameAttr(self, col):
+        # We always use the same renderer and font for all cells within a column
+        return True
+
+    def GetNumberCols(self):
+        return 2
+
+    def GetNumberRows(self):
+        return len(self.task_list)
+
+    def GetValue(self, row, col):
+        if col == 0:
+            return ""
+        task = self.task_list[row]
+        return "" if task == None else task.summary
+
+    def SetValue(self, row, col, value):
+        if col == 1:
+            self.task_list[row].summary = value
+
+    def InsertRows(self, pos=0, numRows=1):
+        # Slicing inserts one list into another at the `pos` index,
+        # and the list being inserted is just a list of None's.
+        self.task_list[pos:pos] = [None] * numRows
+        self.notify_grid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, numRows)
+        return True
+
+    def DeleteRows(self, pos=0, numRows=1):
+        del self.task_list[pos : pos+numRows]
+        self.notify_grid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, pos, numRows)
+        return True
+
+    # TODO: do we need this? - probably yes, for auto-size
+    def GetColLabelValue(self, col):
+        return "Status" if col == 0 else ""
+
+    # TODO: finally decide on the naming style. Looks like we should be using wx naming
+    # here, otherwise it really looks like crap.
+    def notify_grid(self, notification, pos, numRows):
+        msg = wx.grid.GridTableMessage(self, notification, pos, numRows)
+        self.GetView().ProcessTableMessage(msg)
+
+    def get_list(self):
+        """
+        Returns the internal list of tasks, e.g. for serialization purposes.
+
+        Do NOT modify the returned list.  Modifications outside of the 
+        TaskListTable class will not be reflected in the grid widget, and will
+        eventually break the display.
+        """
+        return self.task_list
+
+    def get_items(self, start, end):
+        return self.task_list[start:end]
+
+    def insert_items(self, pos, items):
+        """Inserts the passed Task objects into the list, updating the grid."""
+        self.task_list[pos:pos] = items
+        self.notify_grid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, len(items))
+
+    def load_list(self, items):
+        """
+        Initializes the table with the `items`, discarding all previous
+        contents.  Note: the table makes a shallow copy of the `items` list,
+        and even though the `items` list will not be modified by the table
+        in future, individual Task objects may and will be modified if the user
+        edits the table.
+        """
+        # Believe it or not, as of wxPython 4.1.1 there's *no* way to force the
+        # grid to re-request the table size from the table. 
+        # TaskListTable.GetNumberRows() is only called once (!!!), when
+        # the table gets assigned to the grid. On all other occasions, we have
+        # to use notifications to inform the grid about size changes.
+        # TODO: maybe we should change the logic, and re-create the table
+        # and use SetTable() each time we load a list of tasks. Or maybe even
+        # reuse the same table object, just call SetTable(). Need to check what
+        # attributes might get lost on resetting the table.
+        self.notify_grid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, 0, len(self.task_list))
+        self.task_list = list(items)
+        self.notify_grid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, 0, len(self.task_list))
+
+
 class TaskList(wx.grid.Grid):
 
     # A dirty trick to link the drop target to the drag source. We need
@@ -10,8 +103,16 @@ class TaskList(wx.grid.Grid):
     drop_placeholder_pos = None
     drag_start_row = None
 
+    task_pool = None
+
     def __init__(self, *arg, **kw):
         super().__init__(*arg, **kw)
+
+        # Note: whatever the doc says about AssignTable being identical
+        # to SetTable(takeOwnership=True), seems to be wrong for wxPython 4.1.1.
+        # SetTable works fine whereas AssignTable loses the table object
+        # and causes a crash.
+        self.SetTable(TaskListTable(), takeOwnership=True)
 
         # TODO: maybe use system colors?
         self.drop_placeholder_attr = wx.grid.GridCellAttr()
@@ -20,6 +121,10 @@ class TaskList(wx.grid.Grid):
         self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.on_begin_drag)
         self.SetDropTarget(TaskListDropTarget(self))
 
+
+    def set_task_list(self, task_list, task_pool_):
+        self.task_pool = task_pool_
+        self.GetTable().load_list(task_list)
 
     def GetColGridLinePen1(self, col):
         # pen = wx.Pen(wx.Colour(0, 255, 255), 1, style=wx.PENSTYLE_USER_DASH)
@@ -52,9 +157,9 @@ class TaskList(wx.grid.Grid):
             sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]
 
         items = []
+        table = self.GetTable()
         for block in sel_row_blocks:
-            for i in range(block.GetTopRow(), block.GetBottomRow() + 1):
-                items.append(self.GetCellValue(i, 1))
+            items.extend([t.id for t in table.get_items(block.GetTopRow(), block.GetBottomRow() + 1)])
         drag_data["items"] = items
 
         # TODO: maybe use JSON instead of pickle for security reasons
@@ -78,16 +183,16 @@ class TaskList(wx.grid.Grid):
         drag_source = wx.DropSource(self)
         drag_source.SetData(composite)
         res = drag_source.DoDragDrop(flags=wx.Drag_DefaultMove)
+        if res == wx.DragCopy or res == wx.DragMove:
+            # If a move has been requested, we want to remove the source rows from this list.
+            # For now, we always do a 'move' drag'n'drop. We might need a 'copy' method
+            # within the single list later (e.g. to duplicate tasks - but only in the backlog list).
 
-        # If a move has been requested, we want to remove the source rows from this list.
-        # For now, we always do a 'move' drag'n'drop. We might need a 'copy' method
-        # within the single list later (e.g. to duplicate tasks - but only in the backlog list).
-
-        # If there was no drop into this list (i.e. dragging to another list),
-        # there's no need to correct positions on deleteion - we're preventing this by
-        # using an insertion point beyond the end of list.
-        ins_pos = self.drop_ins_pos if self.drop_ins_pos is not None else self.GetNumberRows()
-        self.delete_dragged_items(sel_row_blocks, ins_pos, len(items))
+            # If there was no drop into this list (i.e. dragging to another list),
+            # there's no need to correct positions on deletion - we're preventing this by
+            # using an insertion point beyond the end of list.
+            ins_pos = self.drop_ins_pos if (self.drop_ins_pos is not None) else self.GetNumberRows()
+            self.delete_dragged_items(sel_row_blocks, ins_pos, len(items))
 
 
     def delete_dragged_items(self, row_blocks, ins_pos=0, ins_len=0):
@@ -110,9 +215,10 @@ class TaskList(wx.grid.Grid):
 
     def insert_dropped_items(self, x, y, items):
         """
-        Insert text at given x, y coordinates --- used with drag-and-drop.
+        Inserts the Task objects with the IDs listed in `items` at the (x, y)
+        position in the grid. The tasks are retrieved from the task pool.
+        Used with drag'n'drop.
         """
-
         # Find the insertion point
         # index = self.YToRow(y, clipToMinMax=True)
         index = self.get_drop_row(x, y)
@@ -147,13 +253,11 @@ class TaskList(wx.grid.Grid):
         # important if we're dragging items from the same list.
         self.drop_ins_pos = index
 
-        # TODO: maybe block repainting
-        self.InsertRows(index, len(items))
+        # TODO: maybe disable repainting
+        self.GetTable().insert_items(index, [self.task_pool.get(id, None) for id in items])
 
-        for item in items:
-            self.SetCellValue(index, 1, item)
-            self.AutoSizeRow(index)
-            index += 1
+        for i in range(0, len(items)):
+            self.AutoSizeRow(index + i)
 
     def move_drop_placeholder(self, x, y):
 
@@ -256,7 +360,7 @@ class TaskListDropTarget(wx.DropTarget):
         ...
         """
 
-        # No more caching needed
+        # No need to cache it anymore
         self.last_drag_point_y = -1
 
         # Copy the data from the drag source to our data object.
@@ -284,3 +388,12 @@ class TaskListDropTarget(wx.DropTarget):
             self.target_list.move_drop_placeholder(x, y)
 
         return defResult
+
+    def OnEnter(self, x, y, defResult):
+        self.last_drag_point_y = y
+        self.target_list.move_drop_placeholder(x, y)
+        return defResult
+
+    def OnLeave(self):
+        self.last_drag_point_y = None
+        self.target_list.delete_drop_placeholder()

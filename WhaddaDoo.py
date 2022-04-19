@@ -6,12 +6,12 @@ from ui.app_gui import AppWindowBase
 class AppWindow(AppWindowBase):
 
     active_tasks = []
+    active_tasks_pool = {}
 
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
 
         self.grid_tasks.SetGridLineColour(wx.Colour(224, 224, 224))
-        self.grid_tasks.SetColLabelValue(0, "Status")
         self.grid_tasks.AutoSizeColLabelSize(0)
         self.grid_tasks.HideRowLabels()
         self.grid_tasks.HideColLabels()
@@ -60,16 +60,10 @@ class AppWindow(AppWindowBase):
         self.resize_grid_columns()
         event.Skip()
 
+    # TODO: throw away this method? rename it? It no longer serves the purpose it did before
     def load_tasks_list(self):
-        # TODO: come up with some consistent naming for such cases
-        grid_tasks = self.grid_tasks
-        grid_tasks.DeleteRows(0, grid_tasks.GetNumberRows())
-        grid_tasks.AppendRows(len(self.active_tasks))
-        i = 0
-        for task in self.active_tasks:
-            grid_tasks.SetCellValue(i, 1, task.summary)
-            i += 1
-            pass
+        self.active_tasks_pool = {t.id: t for t in self.active_tasks if t is not None}
+        self.grid_tasks.set_task_list(self.active_tasks, self.active_tasks_pool)
 
 
 class MyApp(wx.App):
@@ -84,27 +78,25 @@ class MyApp(wx.App):
 
     def read_tasks(self):
         tasks_view = self.frame.grid_tasks
-        # tasks_view.CreateGrid(102, 1)
         # Just some dummy data for now
         # TODO: is there a Freeze/Undo capability? Should we use it?
-        # tasks_view.SetCellValue(0, 1, "First task")
-        # tasks_view.SetCellValue(1, 1, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
         task = Task()
         task.summary = "First task"
+        task.set_numeric_id(-1)
         self.frame.active_tasks.append(task)
         task = Task()
         task.summary = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        task.set_numeric_id(-2)
         self.frame.active_tasks.append(task)
 
         for i in range(0, 8):
             task = Task()
             task.summary = f"test - line {i}"
+            task.set_numeric_id(i)
             self.frame.active_tasks.append(task)
-            # r = tasks_view.SetCellValue(i + 2, 1, f"test - line {i}")
 
         attr = wx.grid.GridCellAttr()
         attr.SetReadOnly(True)
-        tasks_view.SetColAttr(0, attr)
 
         tasks_view.SetGridCursor(0, 1)
 
