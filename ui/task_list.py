@@ -6,12 +6,13 @@ class TaskListTable(wx.grid.GridTableBase):
 
     # This list may contain elements set to None - e.g. to designate a 
     # placeholder for a new task, or a temporary cell
-    task_list = []
+    task_list = None
 
     # TODO: will we also need the task pool? Or should we serialize the task
     # entirely on drag'n'drop?
-    # def __init__(self):
-        # super().__init__()
+    def __init__(self):
+        super().__init__()
+        self.task_list = []
     
     def CanMeasureColUsingSameAttr(self, col):
         # We always use the same renderer and font for all cells within a column
@@ -64,6 +65,9 @@ class TaskListTable(wx.grid.GridTableBase):
         eventually break the display.
         """
         return self.task_list
+
+    def get_item(self, row):
+        return self.task_list[row]
 
     def get_items(self, start, end):
         return self.task_list[start:end]
@@ -258,6 +262,10 @@ class TaskList(wx.grid.Grid):
 
         for i in range(0, len(items)):
             self.AutoSizeRow(index + i)
+
+        # TODO: set cursor or selection to the items we've just inserted
+        # if len(items) == 1:
+        #     self.SetGridCursor()
 
     def move_drop_placeholder(self, x, y):
 

@@ -1,3 +1,4 @@
+from cgitb import text
 import datetime
 from enum import Enum
 import time
@@ -8,8 +9,18 @@ class TaskStatus(Enum):
     DONE = "done"
     CANCELLED = "cancelled"
 
+
 class Epic:
     name = ""
+
+
+class TaskComment:
+    date: datetime = None
+    text: str = ""
+
+    def __init__(self, text_, date_ = None):
+        self.text = text_
+        self.date = date_ if date_ is not None else datetime.datetime.now()
 
 
 _ID_BASE_TIMESTAMP = datetime.datetime(2022, 1, 1).timestamp()
@@ -27,14 +38,16 @@ class Task:
     # TODO: do we need to annotate the type on simple types like string?
     summary: str = ""
     desc: str = ""
-    comments = []
+    comments = None
     # TODO: decide on data type here. Do we want to include time? timezone?
     deadline: datetime.date = None
     epic: Epic = None
-    labels = []
+    labels = None
 
     def __init__(self, *arg, **kw):
         self.gen_id()
+        self.comments = []
+        self.labels = []
 
     def gen_id(self):
         """
