@@ -9,6 +9,10 @@ class TaskStatus(Enum):
     DONE = "done"
     CANCELLED = "cancelled"
 
+    @staticmethod
+    def yaml_representer(dumper, data):
+        return dumper.represent_str(data.value)
+
 
 class Epic:
     name = ""
@@ -21,6 +25,14 @@ class TaskComment:
     def __init__(self, text_, date_ = None):
         self.text = text_
         self.date = date_ if date_ is not None else datetime.datetime.now()
+
+    @staticmethod
+    def yaml_representer(dumper, data):
+        filtered = {
+            "date": data.date,
+            "text": data.text
+        }
+        return dumper.represent_mapping('tag:yaml.org,2002:map', filtered)
 
 
 _ID_BASE_TIMESTAMP = datetime.datetime(2022, 1, 1).timestamp()
@@ -86,3 +98,36 @@ class Task:
         self.id = text_id
 
         return text_id
+
+    def get_full_desc(self):
+        return self.summary + ("\n" + self.desc if self.desc else "")
+
+    # TODO: not sure if we really need this. A static method that returns 
+    # a tuple might be more useful.
+    # def set_full_desc(self, desc):
+    #     paragraphs = desc.split("\n")
+    #     self.summary = paragraphs[0]
+    #     self.desc = "\n".join(paragraphs[1:])
+
+
+    @staticmethod
+    def yaml_representer(dumper, data):
+        # Note: the order of keywords *does matter*. They will be written
+        # to YAML in this order.
+        # TODO: add deadline and status. Date values will need to be limited
+        # to one-second precision (by default they're at the microsecond level).
+        # TODO: instead of adding 'None' values, ignore the keywords. Or make
+        # yaml.dump ignore them. Otherwise there are lines like 'labels: null'
+        # in the output file.
+        filtered = {
+            "status": data.status,
+            "labels": data.labels if len(data.labels) > 0 
+                else None,
+            "epic": data.epic.name if data.epic is not None 
+                else None,
+            "desc": data.get_full_desc(),
+            "comments": data.comments if len(data.comments) > 0 
+                else None
+        }
+        filtered = dict((k, v) for (k, v) in filtered.items() if v is not None)
+        return dumper.represent_mapping('tag:yaml.org,2002:map', filtered)

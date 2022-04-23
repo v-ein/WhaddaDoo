@@ -1,22 +1,33 @@
 from ctypes import resize
 from errno import EDEADLK
+import os
 import wx
-from impl.task import Task, TaskComment
+from impl.task import Task, TaskComment, TaskStatus
 from ui.app_gui import AppWindowBase
+import yaml
+
+# TODO: move to impl
+class NoAliasDumper(yaml.Dumper):
+    def ignore_aliases(self, data):
+        return True
 
 class AppWindow(AppWindowBase):
 
     # TODO: initialize somewhere else? or otherwise instances of this class will
     # be sharing the list and dict
     active_tasks = []
-    active_tasks_pool = {}
+    tasks_pool = {}
     selected_task: Task = None
     # We need this to resize and repaint the correct row in grid_tasks
     selected_task_row: int = 0
     font = None
 
+    board_id = None
+
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
+
+        self.board_id = "test-board"
 
         self.font = wx.Font(wx.Size(0, 14), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
 
@@ -45,6 +56,11 @@ class AppWindow(AppWindowBase):
 
         self.edit_desc.Bind(wx.EVT_KILL_FOCUS, self.on_edit_kill_focus)
 
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, event):
+        self.save_board()
+        event.Skip()
 
     def on_edit_kill_focus(self, event):
         self.save_task_changes()
@@ -104,7 +120,8 @@ class AppWindow(AppWindowBase):
         # self.edit_desc.AddParagraph(task.summary)
         # TODO: Should it be WriteText instead?
         # self.edit_desc.AddParagraph(task.desc)
-        self.edit_desc.SetValue(task.summary + ("\n" + task.desc if task.desc else ""))
+        # self.edit_desc.SetValue(task.summary + ("\n" + task.desc if task.desc else ""))
+        self.edit_desc.SetValue(task.get_full_desc())
         # TODO: adjust edit_desc size to fit contents
         # self.edit_desc.
         grid_comments = self.grid_comments
@@ -160,23 +177,48 @@ class AppWindow(AppWindowBase):
 
     # TODO: throw away this method? rename it? It no longer serves the purpose it did before
     def load_tasks_list(self):
-        self.active_tasks_pool = {t.id: t for t in self.active_tasks if t is not None}
-        self.grid_tasks.set_task_list(self.active_tasks, self.active_tasks_pool)
+        self.tasks_pool = {t.id: t for t in self.active_tasks if t is not None}
+        self.grid_tasks.set_task_list(self.active_tasks, self.tasks_pool)
         self.grid_tasks.SetGridCursor(0, 1)
+
+    # TODO: think on naming conventions. Are "Save/Load" about disk I/O? If so,
+    # how should we name methods dealing with memory objects and widgets?
+    def save_board(self):
+        # TODO: only save the board if it has been modified? Add a 'force' parm?
+        # At least we don't want extra writing when called from OnClose().
+
+        # TODO: keep a sequential list of IDs from the reading op, and use it
+        # to determine the sequence in which the Task objects should be
+        # written to the output file.
+        tmp_dir_name = self.board_id + ".new"
+        yaml.add_representer(Task, Task.yaml_representer)
+        yaml.add_representer(TaskStatus, TaskStatus.yaml_representer)
+        yaml.add_representer(TaskComment, TaskComment.yaml_representer)
+        try:
+            os.mkdir(tmp_dir_name)
+            # TODO: this seems to be a dirty trick. Find a better way.
+            # yaml.emitter.Emitter.process_tag = lambda self, *args, **kw: None
+            with open(os.path.join(tmp_dir_name, "tasks.yaml"), "w", encoding='utf8') as f:
+                yaml.dump(self.tasks_pool, f, default_flow_style=False,
+                    allow_unicode=True, sort_keys=False, Dumper=NoAliasDumper)
+                # for task in self.tasks_pool:
+                #     pass
+        except FileExistsError:
+            # TODO: show an error message
+            return
 
 
 class MyApp(wx.App):
     def OnInit(self):
         self.frame = AppWindow(None, wx.ID_ANY, "")
         self.SetTopWindow(self.frame)
-        
+
         self.read_tasks()
 
         self.frame.Show()
         return True
 
     def read_tasks(self):
-        tasks_view = self.frame.grid_tasks
         # Just some dummy data for now
         # TODO: is there a Freeze/Undo capability? Should we use it?
         task = Task()
