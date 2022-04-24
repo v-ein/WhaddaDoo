@@ -1,4 +1,5 @@
 from ctypes import resize
+import datetime
 from errno import EDEADLK
 import os
 import wx
@@ -170,6 +171,7 @@ class AppWindow(AppWindowBase):
         
 
     def on_frame_show(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.load_board()
         self.load_tasks_list()
         self.resize_grid_columns()
         self.resize_comments_columns()
@@ -181,6 +183,11 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.set_task_list(self.active_tasks, self.tasks_pool)
         self.grid_tasks.SetGridCursor(0, 1)
 
+    @staticmethod
+    def yaml_date_representer(self, data):
+        value = data.isoformat(" ", "seconds")
+        return self.represent_scalar('tag:yaml.org,2002:timestamp', value)
+
     # TODO: think on naming conventions. Are "Save/Load" about disk I/O? If so,
     # how should we name methods dealing with memory objects and widgets?
     def save_board(self):
@@ -191,9 +198,11 @@ class AppWindow(AppWindowBase):
         # to determine the sequence in which the Task objects should be
         # written to the output file.
         tmp_dir_name = self.board_id + ".new"
+        # TODO: we should make these "add_xxx" calls early on init
         yaml.add_representer(Task, Task.yaml_representer)
         yaml.add_representer(TaskStatus, TaskStatus.yaml_representer)
         yaml.add_representer(TaskComment, TaskComment.yaml_representer)
+        yaml.add_representer(datetime.datetime, self.yaml_date_representer)
         try:
             os.mkdir(tmp_dir_name)
             # TODO: this seems to be a dirty trick. Find a better way.
@@ -203,10 +212,31 @@ class AppWindow(AppWindowBase):
                     allow_unicode=True, sort_keys=False, Dumper=NoAliasDumper)
                 # for task in self.tasks_pool:
                 #     pass
+            # TODO: save the index
+            # TODO: delete the old board and rename the temp dir
         except FileExistsError:
             # TODO: show an error message
+            # TODO: delete the temp dir
             return
 
+    def load_board(self):
+        tmp_dir_name = self.board_id + ".new"
+        # yaml.add_constructor(Task, Task.yaml_constructor)
+        # TODO: handle exceptions
+        with open(os.path.join(tmp_dir_name, "tasks.yaml"), "r", encoding='utf8') as f:
+            # Since we don't save object tags in save_board(), it's ok to use
+            # the SafeLoader here - YAML won't be able to deduce class names
+            # anyway.
+            obj_pool = yaml.load(f, Loader=yaml.SafeLoader)
+            # TODO: verify that obj_pool is a dict
+            self.tasks_pool = {}
+            self.active_tasks = []
+            for (k, v) in obj_pool.items():
+                self.tasks_pool[k] = Task.from_plain_object(k, v)
+                # TODO: remove this temporary piece:
+                if (self.tasks_pool[k].status == TaskStatus.ACTIVE):
+                    self.active_tasks.append(self.tasks_pool[k])
+            # TODO: load index
 
 class MyApp(wx.App):
     def OnInit(self):

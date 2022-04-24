@@ -56,6 +56,9 @@ class Task:
     epic: Epic = None
     labels = None
 
+    # TODO: we need the date when the task was marked as 'done' or 'cancelled'.
+    # If only to sort the tasks in the 'done' list. Maybe also creation date?
+
     def __init__(self, *arg, **kw):
         self.gen_id()
         self.comments = []
@@ -104,10 +107,10 @@ class Task:
 
     # TODO: not sure if we really need this. A static method that returns 
     # a tuple might be more useful.
-    # def set_full_desc(self, desc):
-    #     paragraphs = desc.split("\n")
-    #     self.summary = paragraphs[0]
-    #     self.desc = "\n".join(paragraphs[1:])
+    def set_full_desc(self, desc):
+        paragraphs = desc.split("\n")
+        self.summary = paragraphs[0]
+        self.desc = "\n".join(paragraphs[1:])
 
 
     @staticmethod
@@ -131,3 +134,36 @@ class Task:
         }
         filtered = dict((k, v) for (k, v) in filtered.items() if v is not None)
         return dumper.represent_mapping('tag:yaml.org,2002:map', filtered)
+
+    @staticmethod
+    def from_plain_object(id, obj):
+        """
+        Construct a task based off a plain object read from YAML.
+
+        We can't use YAML constructors directly because we don't save tags into
+        YAML, and therefore PyYAML can't deduce object types on reading.
+        """
+        task = Task()
+        task.id = id
+        # TODO: validate the object and throw an exception (which?) if it's 
+        # missing required fields. Or are all the fields optional?
+        # TODO: this certainly can be beautified somehow. Also, it should
+        # probably be a constructor of Task that accepts a dictionary
+        if "status" in obj:
+            # TODO: it can throw an exception. Should we just pass it up to the
+            # caller? Then probably all other similar exceptions, too?
+            task.status = TaskStatus(obj["status"])
+        if "desc" in obj:
+            task.set_full_desc(obj["desc"])
+        # if "epic" in obj:
+        if "comments" in obj:
+            # TODO: make sure it's a list
+            for c in obj["comments"]:
+                if "text" in c and "date" in c:
+                    d = c["date"]
+                    if type(d) is str:
+                        d = datetime.datetime.fromisoformat(d)
+                    if type(d) is datetime.datetime:
+                        task.comments.append(TaskComment(c["text"], d))
+        return task
+    
