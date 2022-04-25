@@ -1,8 +1,6 @@
-from ctypes import resize
 import datetime
-from errno import EDEADLK
 import os
-import shutil
+import tempfile
 import wx
 from impl.task import Task, TaskComment, TaskStatus
 from ui.app_gui import AppWindowBase
@@ -45,6 +43,7 @@ class AppWindow(AppWindowBase):
         # single-line cell, but that's what we probably have to put up with for now.
         self.grid_tasks.SetDefaultEditor(wx.grid.GridCellAutoWrapStringEditor())
         self.grid_tasks.SetDefaultCellFont(self.font)
+        # TODO: make the first column read-only
 
         self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_tasks_size)
         # self.grid_tasks.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.on_grid_select_cell)
@@ -78,7 +77,11 @@ class AppWindow(AppWindowBase):
             # TODO: do we need to save anything before changing the selection pointer?
             self.save_task_changes()
             self.selected_task_row = event.GetRow()
-            self.selected_task = self.grid_tasks.GetTable().get_item(self.selected_task_row)
+            try:
+                self.selected_task = self.grid_tasks.GetTable().get_item(self.selected_task_row)
+            except IndexError:
+                # Sometimes we might go out of range, e.g. when the table is empty
+                self.selected_task = None
             self.load_task_details()
             event.Skip()
 
@@ -102,6 +105,10 @@ class AppWindow(AppWindowBase):
 
     def load_task_details(self):
         task = self.selected_task
+        # TODO: properly clear the right panel if the selected task is None
+        if task is None:
+            return
+
         # self.edit_desc.Clear()
         # TODO: clear `edit_desc` better - do not leave the empty paragraph
         # self.edit_desc.Delete(wx.richtext.RichTextRange(0, 1))
@@ -195,53 +202,88 @@ class AppWindow(AppWindowBase):
         # TODO: keep a sequential list of IDs from the reading op, and use it
         # to determine the sequence in which the Task objects should be
         # written to the output file.
-        tmp_dir_name = self.board_id + ".new"
+        dir_name = self.board_id
         try:
-            os.mkdir(tmp_dir_name)
+            try:
+                os.mkdir(dir_name)
+            except FileExistsError:
+                # It's ok for the directory to already exist
+                pass
+            
+            # TODO: we can append new data to tasks.yaml if it's known to have
+            # no changes to the old contents (e.g. the user only added new tasks
+            # and didn't touch the *contents* of the old ones). Caveat: we do
+            # store the status inside of tasks.yaml. Maybe it's wrong.
 
-            with open(os.path.join(tmp_dir_name, "tasks.yaml"), "w", encoding='utf8') as f:
+            tasks_file_name = None
+            with tempfile.NamedTemporaryFile(mode="w", dir=dir_name, delete=False,
+                encoding='utf8', prefix="tasks.", suffix=".yaml") as f:
+
                 yaml.dump(self.tasks_pool, f, default_flow_style=False,
                     allow_unicode=True, sort_keys=False, Dumper=NoAliasDumper)
+                # Keep it for future reference
+                tasks_file_name = f.name
 
-            with open(os.path.join(tmp_dir_name, "active.txt"), "w", encoding='utf8') as f:
-                # TODO: *not* self.active_tasks!! take it from the table
-                for task in self.active_tasks:
+            index_file_name = None
+            with tempfile.NamedTemporaryFile(mode="w", dir=dir_name, delete=False,
+                encoding='utf8', prefix="active.", suffix=".txt") as f:
+
+                for task in self.grid_tasks.GetTable().get_list():
                     f.write(task.id + "\n")
+                # Keep it for future reference
+                index_file_name = f.name
 
-            # TODO: this is wrong! the directory may be locked by a process
-            # having open files in it. Let's rename the files themselves.
-            # Maybe we shouldn't even create a tmp directory, and use the existing one.
-            try:
-                shutil.rmtree(self.board_id)
-            except OSError:
-                # TODO: there may be different reasons, and we're only interested
-                # in skipping something like 'file not found'
-                pass
+            # Note: we do not implement a full transaction-like rename here
+            # because the new files have been created successfully, so even
+            # in the worst scenario when something breaks in the middle, the
+            # user can manually rename them. A full rename (renaming the
+            # old files first) would help implement a clean recovery in case
+            # of errors, and would also help in case the old files are
+            # locked (on Windows). But it's too complicated for such a
+            # simple tool.
+            self.replace_file(os.path.join(dir_name, "tasks.yaml"), tasks_file_name)
+            self.replace_file(os.path.join(dir_name, "active.txt"), index_file_name)
 
-            os.rename(tmp_dir_name, self.board_id)
-        except FileExistsError:
-            # TODO: show an error message
-            # TODO: delete the temp dir
-            return
+        except OSError:
+            # TODO: !!IMPORTANT!! show an error message
+            pass
+
+    @staticmethod
+    def replace_file(old_name, new_name):
+        try:
+            os.remove(old_name)
+        except FileNotFoundError:
+            # It's okay, we've just created a new file, no old version here
+            pass
+        os.rename(new_name, old_name)
 
     def load_board(self):
-        tmp_dir_name = self.board_id
-        # yaml.add_constructor(Task, Task.yaml_constructor)
+        self.tasks_pool = {}
+        self.active_tasks = []
+
+        dir_name = self.board_id
         # TODO: handle exceptions
-        with open(os.path.join(tmp_dir_name, "tasks.yaml"), "r", encoding='utf8') as f:
+        with open(os.path.join(dir_name, "tasks.yaml"), "r", encoding='utf8') as f:
             # Since we don't save object tags in save_board(), it's ok to use
             # the SafeLoader here - YAML won't be able to deduce class names
             # anyway.
             obj_pool = yaml.load(f, Loader=yaml.SafeLoader)
             # TODO: verify that obj_pool is a dict
-            self.tasks_pool = {}
-            self.active_tasks = []
             for (k, v) in obj_pool.items():
                 self.tasks_pool[k] = Task.from_plain_object(k, v)
-                # TODO: remove this temporary piece:
-                if (self.tasks_pool[k].status == TaskStatus.ACTIVE):
-                    self.active_tasks.append(self.tasks_pool[k])
-            # TODO: load index
+
+        with open(os.path.join(dir_name, "active.txt"), "r", encoding='utf8') as f:
+            for task_id in f.readlines():
+                task_id = task_id.strip()
+                if task_id in self.tasks_pool:
+                    # TODO: make sure the status is 'active'
+                    self.active_tasks.append(self.tasks_pool[task_id])
+                else:
+                    # TODO: show an error message. Maybe throw an exception.
+                    # But we probably want to recover as much of the board 
+                    # contents as we can in case of such errors.
+                    pass
+
 
 class MyApp(wx.App):
     def OnInit(self):
@@ -253,8 +295,6 @@ class MyApp(wx.App):
         self.frame = AppWindow(None, wx.ID_ANY, "")
         self.SetTopWindow(self.frame)
 
-        self.read_tasks()
-
         self.frame.Show()
         return True
 
@@ -263,31 +303,6 @@ class MyApp(wx.App):
         value = data.isoformat(" ", "seconds")
         return self.represent_scalar('tag:yaml.org,2002:timestamp', value)
 
-    def read_tasks(self):
-        # Just some dummy data for now
-        # TODO: is there a Freeze/Undo capability? Should we use it?
-        task = Task()
-        task.summary = "First task"
-        task.set_numeric_id(-1)
-        self.frame.active_tasks.append(task)
-        task = Task()
-        task.summary = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        for i in range(0, 10):
-            task.comments.append(TaskComment(f"Test comment {i}"))
-        task.set_numeric_id(-2)
-        self.frame.active_tasks.append(task)
-
-        for i in range(0, 8):
-            task = Task()
-            task.summary = f"test - line {i}"
-            task.set_numeric_id(i)
-            self.frame.active_tasks.append(task)
-
-        attr = wx.grid.GridCellAttr()
-        attr.SetReadOnly(True)
-
-
-        return
 
 if __name__ == "__main__":
     app = MyApp(0)
