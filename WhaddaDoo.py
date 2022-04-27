@@ -61,9 +61,6 @@ class AppWindow(AppWindowBase):
         self.grid_comments.Bind(wx.EVT_SIZE, self.on_grid_comments_size)
 
         self.edit_desc.Bind(wx.EVT_TEXT, self.on_edit_desc_text_change)
-        self.edit_desc.Bind(wx.EVT_KILL_FOCUS, self.on_edit_kill_focus)
-        # self.btn_desc_discard.Bind(wx.EVT_KILL_FOCUS, self.on_edit_kill_focus)
-        # self.btn_desc_save.Bind(wx.EVT_KILL_FOCUS, self.on_edit_kill_focus)
 
         # TODO: think about para spacing. Might be good to just leave it as is.
         # We'll need to use blank lines anyway, or otherwise it's going to be like
@@ -75,11 +72,15 @@ class AppWindow(AppWindowBase):
         style.SetParagraphSpacingAfter(8)
         self.edit_desc.SetDefaultStyle(style)
 
+        self.label_done.SetBuddy(self.grid_done)
+        self.label_active.SetBuddy(self.grid_tasks)
+
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, event):
         # TODO: make sure it's also called when the app is being closed due to
         # the system shutdown
+        self.save_task_changes()
         self.save_board()
         event.Skip()
 
@@ -98,12 +99,6 @@ class AppWindow(AppWindowBase):
     def on_edit_desc_text_change(self, event):
         if not self.ignore_edit_change:
             self.show_desc_buttons()
-        event.Skip()
-
-    def on_edit_kill_focus(self, event):
-        new_focus = event.GetWindow()
-        if new_focus != self.btn_desc_discard and new_focus != self.btn_desc_save:
-            self.save_task_changes()
         event.Skip()
 
     def on_grid_tasks_select_cell(self, event):
