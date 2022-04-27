@@ -23,6 +23,11 @@ class AppWindow(AppWindowBase):
     font = None
 
     board_id = None
+    # RichTextCtrl.ChangeValue() should not be sending EVT_TEXT events; however,
+    # due to a bug in wxWindows, it does send them. As a result, sometimes we
+    # need to ignore the events. This field can be removed as soon as the bug
+    # gets fixed.
+    ignore_edit_change = False
 
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
@@ -55,16 +60,50 @@ class AppWindow(AppWindowBase):
 
         self.grid_comments.Bind(wx.EVT_SIZE, self.on_grid_comments_size)
 
+        self.edit_desc.Bind(wx.EVT_TEXT, self.on_edit_desc_text_change)
         self.edit_desc.Bind(wx.EVT_KILL_FOCUS, self.on_edit_kill_focus)
+        # self.btn_desc_discard.Bind(wx.EVT_KILL_FOCUS, self.on_edit_kill_focus)
+        # self.btn_desc_save.Bind(wx.EVT_KILL_FOCUS, self.on_edit_kill_focus)
+
+        # TODO: think about para spacing. Might be good to just leave it as is.
+        # We'll need to use blank lines anyway, or otherwise it's going to be like
+        # that shitty RTF editor in Jira. E.g. can we properly set spacing between
+        # a para and a list? between list items? Are we going to have lists, anyway?
+        # Where outside of WhaddaDoo can we use the task description? Copy it somewhere?
+        # Will text without blank lines become unreadable?
+        style = wx.TextAttr(wx.Colour(0, 0, 0), font=self.font)
+        style.SetParagraphSpacingAfter(8)
+        self.edit_desc.SetDefaultStyle(style)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, event):
+        # TODO: make sure it's also called when the app is being closed due to
+        # the system shutdown
         self.save_board()
         event.Skip()
 
-    def on_edit_kill_focus(self, event):
+    def on_btn_desc_discard(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        dlg = wx.MessageDialog(self, "Discard all changes you've made to the task description?", "Discard changes", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
+        result = dlg.ShowModal()
+        dlg.Destroy()
+        if result == wx.ID_OK:
+            self.load_task_desc()
+        event.Skip()
+
+    def on_btn_desc_save(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.save_task_changes()
+        event.Skip()
+
+    def on_edit_desc_text_change(self, event):
+        if not self.ignore_edit_change:
+            self.show_desc_buttons()
+        event.Skip()
+
+    def on_edit_kill_focus(self, event):
+        new_focus = event.GetWindow()
+        if new_focus != self.btn_desc_discard and new_focus != self.btn_desc_save:
+            self.save_task_changes()
         event.Skip()
 
     def on_grid_tasks_select_cell(self, event):
@@ -85,6 +124,20 @@ class AppWindow(AppWindowBase):
             self.load_task_details()
             event.Skip()
 
+    def show_desc_buttons(self, show: bool = True):
+        # TODO: We should probably restrict Tab navigation to this panel only,
+        # i.e. rich edit box - discard - save.
+
+        # self.panel_desc_buttons.Layout()
+        # self.panel_desc_buttons.ShowWithEffect(wx.SHOW_EFFECT_SLIDE_TO_BOTTOM)
+        # TODO: do something to prevent flickering. The panel initially
+        # shows up in the top left corner of the right pane, and with a
+        # weird size. Then, Layout() places it where it belongs.
+        self.panel_desc_buttons.Show(show)
+        # self.sizer_right_pane.Show(2)
+        self.sizer_right_pane.Layout()
+        # self.panel_desc_buttons.Layout()
+
     def save_task_changes(self):
         # TODO: check if validators can/should be used instead
         task = self.selected_task
@@ -95,13 +148,25 @@ class AppWindow(AppWindowBase):
         paragraphs = desc.split("\n")
         summary = paragraphs[0]
         desc = "\n".join(paragraphs[1:])
+        # TODO: we need to compare desc in order to set the modified flag for the board
         task.desc = desc
         if summary != task.summary:
             task.summary = summary
-            # TODO: tell the grid to update the task we've modified
-            # self.grid_tasks.ForceRefresh()
+            # TODO: tell the grid to update only the task we've modified
             self.grid_tasks.AutoSizeRow(self.selected_task_row)
             self.grid_tasks.ForceRefresh()
+
+        self.show_desc_buttons(False)
+
+    def load_task_desc(self):
+        task = self.selected_task
+        # TODO: properly clear the right panel if the selected task is None
+        if task is None:
+            return
+        self.ignore_edit_change = True
+        self.edit_desc.ChangeValue(task.get_full_desc())
+        self.ignore_edit_change = False
+        self.show_desc_buttons(False)
 
     def load_task_details(self):
         task = self.selected_task
@@ -109,28 +174,8 @@ class AppWindow(AppWindowBase):
         if task is None:
             return
 
-        # self.edit_desc.Clear()
-        # TODO: clear `edit_desc` better - do not leave the empty paragraph
-        # self.edit_desc.Delete(wx.richtext.RichTextRange(0, 1))
-        # TODO: do we really need to set up style each time, or can we do this
-        # in the constructor?
-        style = wx.TextAttr(wx.Colour(0, 0, 0), font=self.font)
-        # TODO: think about para spacing. Might be good to just leave it as is.
-        # We'll need to use blank lines anyway, or otherwise it's going to be like
-        # that shitty RTF editor in Jira. E.g. can we properly set spacing between
-        # a para and a list? between list items? Are we going to have lists, anyway?
-        # Where outside of WhaddaDoo can we use the task description? Copy it somewhere?
-        # Will text without blank lines become unreadable?
-        style.SetParagraphSpacingAfter(8)
-        # style.SetLeftIndent(0, 30)
-        # style.SetLineSpacing(8)
-        self.edit_desc.SetDefaultStyle(style)
+        self.load_task_desc()
 
-        # self.edit_desc.AddParagraph(task.summary)
-        # TODO: Should it be WriteText instead?
-        # self.edit_desc.AddParagraph(task.desc)
-        # self.edit_desc.SetValue(task.summary + ("\n" + task.desc if task.desc else ""))
-        self.edit_desc.SetValue(task.get_full_desc())
         # TODO: adjust edit_desc size to fit contents
         # self.edit_desc.
         grid_comments = self.grid_comments
