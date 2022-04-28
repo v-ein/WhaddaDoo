@@ -1,4 +1,6 @@
-from cmath import exp
+# Copyright © 2022 Vladimir Ein. All rights reserved.
+# License: http://opensource.org/licenses/MIT
+# 
 import wx
 
 class CollapseButton(wx.StaticText):

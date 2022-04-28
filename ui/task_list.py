@@ -1,3 +1,6 @@
+# Copyright © 2022 Vladimir Ein. All rights reserved.
+# License: http://opensource.org/licenses/MIT
+# 
 import pickle
 import wx
 

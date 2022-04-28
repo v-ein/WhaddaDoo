@@ -1,4 +1,6 @@
-from cgitb import text
+# Copyright © 2022 Vladimir Ein. All rights reserved.
+# License: http://opensource.org/licenses/MIT
+# 
 import datetime
 from enum import Enum
 import time
