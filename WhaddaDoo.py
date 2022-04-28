@@ -15,7 +15,6 @@ class AppWindow(AppWindowBase):
 
     # TODO: initialize somewhere else? or otherwise instances of this class will
     # be sharing the list and dict
-    active_tasks = []
     tasks_pool = {}
     selected_task: Task = None
     # We need this to resize and repaint the correct row in grid_tasks
@@ -48,17 +47,35 @@ class AppWindow(AppWindowBase):
         # single-line cell, but that's what we probably have to put up with for now.
         self.grid_tasks.SetDefaultEditor(wx.grid.GridCellAutoWrapStringEditor())
         self.grid_tasks.SetDefaultCellFont(self.font)
-        # TODO: make the first column read-only
 
-        self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_tasks_size)
-        # self.grid_tasks.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.on_grid_select_cell)
+        read_only_cell_attr = wx.grid.GridCellAttr()
+        read_only_cell_attr.SetReadOnly()
+        self.grid_tasks.SetColAttr(0, read_only_cell_attr.Clone())
+
+
+        self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_size)
+
+        self.grid_done.SetGridLineColour(wx.Colour(224, 224, 224))
+        self.grid_done.AutoSizeColLabelSize(0)
+        self.grid_done.HideRowLabels()
+        self.grid_done.HideColLabels()
+        # TODO: we need a special drop target here
+        self.grid_done.EnableDragCell()
+        self.grid_done.DisableDragColSize()
+        self.grid_done.DisableDragRowSize()
+        self.grid_done.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
+        self.grid_done.SetDefaultCellFont(self.font)
+        self.grid_done.SetColAttr(0, read_only_cell_attr.Clone())
+        self.grid_done.SetColAttr(1, read_only_cell_attr.Clone())
+
+        self.grid_done.Bind(wx.EVT_SIZE, self.on_grid_size)
 
         self.grid_comments.HideRowLabels()
         self.grid_comments.HideColLabels()
         self.grid_comments.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         self.grid_comments.SetDefaultCellFont(self.font)
 
-        self.grid_comments.Bind(wx.EVT_SIZE, self.on_grid_comments_size)
+        self.grid_comments.Bind(wx.EVT_SIZE, self.on_grid_size)
 
         self.edit_desc.Bind(wx.EVT_TEXT, self.on_edit_desc_text_change)
 
@@ -74,6 +91,11 @@ class AppWindow(AppWindowBase):
 
         self.label_done.SetBuddy(self.grid_done)
         self.label_active.SetBuddy(self.grid_tasks)
+
+        # For some reason wxGlade does not generate grid.Hide() for a custom
+        # grid when the 'hidden' attribute is turned on. Let's collapse this
+        # grid explicitly.
+        self.label_done.Expand(False)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -102,6 +124,8 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def on_grid_tasks_select_cell(self, event):
+        # This handler is used for both grid_tasks and grid_done
+        grid = event.GetEventObject()
         if event.GetCol() == 0:
             event.GetEventObject().SetGridCursor(event.GetRow(), 1)
             # Note: we deliberately disallow the grid to handle this event, otherwise
@@ -112,7 +136,7 @@ class AppWindow(AppWindowBase):
             self.save_task_changes()
             self.selected_task_row = event.GetRow()
             try:
-                self.selected_task = self.grid_tasks.GetTable().get_item(self.selected_task_row)
+                self.selected_task = grid.GetTable().get_item(self.selected_task_row)
             except IndexError:
                 # Sometimes we might go out of range, e.g. when the table is empty
                 self.selected_task = None
@@ -169,6 +193,8 @@ class AppWindow(AppWindowBase):
         if task is None:
             return
 
+        # TODO: if the task is completed (done or cancel), disable editing
+        # (except for comments).
         self.load_task_desc()
 
         # TODO: adjust edit_desc size to fit contents
@@ -186,29 +212,30 @@ class AppWindow(AppWindowBase):
             grid_comments.SetCellValue(row, 0, comment.date.isoformat(' ', 'seconds'))
             grid_comments.SetCellValue(row + 1, 0, comment.text)
             row += 2
-        self.resize_comments_columns()
+        self.grid_comments.AutoSizeRows()
         # TODO: fill in the remaining controls
 
 
-    def resize_grid_columns(self):
-        task_list = self.grid_tasks
-        task_list.SetColSize(1, task_list.GetClientSize().width - task_list.GetColSize(0))
-        task_list.AutoSizeRows()
+    def resize_grid_columns(self, grid):
+        #
+        # Resizes the last column in the grid to fit the client area, 
+        # if possible. Then, auto-sizes all the rows because the change to
+        # column width might be causing changes in word wrapping.
+        #
+        last_col = grid.GetNumberCols() - 1
+        new_width = grid.GetClientSize().width
+        for i in range(0, last_col):
+            new_width -= grid.GetColSize(i)
+
+        # If there's too little or no space for the column, limit its width
+        # to 20. It would be better to use the header width instead, but
+        # Grid does not provide a way to retrieve it.
+        grid.SetColSize(last_col, max(new_width, 20))
+        grid.AutoSizeRows()
 
 
-    def on_grid_tasks_size(self, event):
-        self.resize_grid_columns()
-        event.Skip()
-
-    # TODO: combine it with resize_grid_columns - we can always auto-size the
-    # last column
-    def resize_comments_columns(self):
-        grid_comments = self.grid_comments
-        grid_comments.SetColSize(0, grid_comments.GetClientSize().width)
-        grid_comments.AutoSizeRows()
-
-    def on_grid_comments_size(self, event):
-        self.resize_comments_columns()
+    def on_grid_size(self, event):
+        self.resize_grid_columns(event.GetEventObject())
         event.Skip()
 
     def on_grid_tasks_cell_changed(self, event):  # wxGlade: AppWindowBase.<event_handler>
@@ -219,19 +246,14 @@ class AppWindow(AppWindowBase):
         
 
     def on_frame_show(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.resize_grid_columns(self.grid_tasks)
+        self.resize_grid_columns(self.grid_done)
+        self.resize_grid_columns(self.grid_comments)
         # TODO: we should iterate over the sub-directories in the repo and
         # for every directory with "tasks.yaml" inside, load it as a board.
         # We *don't know* the board name beforehand.
         self.load_board()
-        self.load_tasks_list()
-        self.resize_grid_columns()
-        self.resize_comments_columns()
         event.Skip()
-
-    # TODO: throw away this method? rename it? It no longer serves the purpose it did before
-    def load_tasks_list(self):
-        self.grid_tasks.set_task_list(self.active_tasks, self.tasks_pool)
-        self.grid_tasks.SetGridCursor(0, 1)
 
     # TODO: think on naming conventions. Are "Save/Load" about disk I/O? If so,
     # how should we name methods dealing with memory objects and widgets?
@@ -299,10 +321,12 @@ class AppWindow(AppWindowBase):
 
     def load_board(self):
         self.tasks_pool = {}
-        self.active_tasks = []
+        active_tasks = []
 
         dir_name = self.board_id
         # TODO: handle exceptions
+        completed_set = {}
+        active_set = {}
         with open(os.path.join(dir_name, "tasks.yaml"), "r", encoding='utf8') as f:
             # Since we don't save object tags in save_board(), it's ok to use
             # the SafeLoader here - YAML won't be able to deduce class names
@@ -310,19 +334,58 @@ class AppWindow(AppWindowBase):
             obj_pool = yaml.load(f, Loader=yaml.SafeLoader)
             # TODO: verify that obj_pool is a dict
             for (k, v) in obj_pool.items():
-                self.tasks_pool[k] = Task.from_plain_object(k, v)
+                task = Task.from_plain_object(k, v)
+                self.tasks_pool[k] = task
+                if task.status == TaskStatus.ACTIVE:
+                    active_set[k] = task
+                else:
+                    completed_set[k] = task
 
         with open(os.path.join(dir_name, "active.txt"), "r", encoding='utf8') as f:
             for task_id in f.readlines():
                 task_id = task_id.strip()
                 if task_id in self.tasks_pool:
                     # TODO: make sure the status is 'active'
-                    self.active_tasks.append(self.tasks_pool[task_id])
+                    active_tasks.append(self.tasks_pool[task_id])
+                    del active_set[task_id]
                 else:
                     # TODO: show an error message. Maybe throw an exception.
                     # But we probably want to recover as much of the board 
                     # contents as we can in case of such errors.
                     pass
+
+        # TODO: verify that active_set is empty
+
+        # TODO: sort tasks by completion date, newer to older
+        self.grid_done.set_task_list(list(completed_set.values()), self.tasks_pool)
+        self.grid_done.AutoSizeRows()
+        self.grid_done.SetGridCursor(0, 1)
+
+        # Note: we're loading grid_tasks after grid_done in order to get the
+        # first *active* task displayed in the right pane (i.e. we want
+        # grid_tasks.SetGridCursor() to go after grid_done.SetGridCursor(),
+        # not before it).
+        self.grid_tasks.set_task_list(active_tasks, self.tasks_pool)
+        self.grid_tasks.AutoSizeRows()
+        self.grid_tasks.SetGridCursor(0, 1)
+
+    def mark_completed(self, final_status=TaskStatus.DONE):
+        task = self.selected_task
+        if task is None:
+            # Nothing to do here
+            return
+        task.status = final_status
+        self.grid_tasks.DeleteRows(self.selected_task_row)
+        self.grid_done.GetTable().insert_items(0, [task])
+        self.grid_done.AutoSizeRow(0)
+
+    def on_btn_cancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.mark_completed(TaskStatus.CANCELLED)
+        event.Skip()
+
+    def on_btn_done(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.mark_completed()
+        event.Skip()
 
 
 class MyApp(wx.App):

@@ -33,13 +33,13 @@ zzzzzzy:
   status: active
   desc: test - line 1
 '2':
-  status: active
+  status: done
   desc: test - line 2
 '3':
   status: active
   desc: test - line 3
 '4':
-  status: active
+  status: done
   desc: test - line 4
 '5':
   status: active

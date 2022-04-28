@@ -17,14 +17,17 @@ class CollapseButton(wx.StaticText):
         self.SetLabel(self.caption)
 
     def OnMouseUp(self, event):
-        expand = not self.buddy.IsShown()
-        self.buddy.Show(expand)
-        self.SetLabel(self.caption, expand)
-        self.buddy.GetContainingSizer().Layout()
+        # Reversing the expanded state
+        self.Expand(not self.buddy.IsShown())
         event.Skip()
         
-    def SetLabel(self, label, expanded = None):
+    def SetLabel(self, label, expanded=None):
         if expanded is None:
             expanded = self.buddy.IsShown()
         self.caption = label
         super().SetLabel(("\u25BC " if expanded else "\u25B6 ") + label)
+
+    def Expand(self, expand=True):
+        self.buddy.Show(expand)
+        self.SetLabel(self.caption, expand)
+        self.buddy.GetContainingSizer().Layout()

@@ -120,6 +120,7 @@ class TaskList(wx.grid.Grid):
 
         # TODO: maybe use system colors?
         self.drop_placeholder_attr = wx.grid.GridCellAttr()
+        self.drop_placeholder_attr.SetReadOnly()
         self.drop_placeholder_attr.SetBackgroundColour(wx.Colour(224, 224, 224))
 
         self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.on_begin_drag)
@@ -301,10 +302,16 @@ class TaskList(wx.grid.Grid):
             self.SetGridCursor(cursor)
 
         self.InsertRows(row_pos, 1)
+
         # Need to copy the attributes object, or otherwise it will get deleted
-        # in C++ when the placeholder is deleted
-        drop_placeholder_attr = wx.grid.GridCellAttr()
-        drop_placeholder_attr.SetBackgroundColour(wx.Colour(224, 224, 224))
+        # in C++ when the placeholder is deleted. Please note: Even though
+        # GridCellAttr has a constructor that accepts another GridCellAttr
+        # object, that constructor doesn't make a copy, but instead sets an
+        # internal reference to a 'default' attr object. While it seems to yield
+        # similar results e.g. on GetBackgroundColour(), the grid somehow
+        # ignores the default attributes object. That's why we have to use
+        # Clone().
+        drop_placeholder_attr = self.drop_placeholder_attr.Clone()
         self.SetRowAttr(row_pos, drop_placeholder_attr)
         # TODO: placeholder height?
         self.drop_placeholder_pos = row_pos

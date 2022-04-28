@@ -56,9 +56,7 @@ class AppWindowBase(wx.Frame):
         static_line_1 = wx.StaticLine(self.window_1_pane_1, wx.ID_ANY)
         sizer_7.Add(static_line_1, 1, wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM | wx.LEFT | wx.RIGHT, 4)
 
-        self.grid_done = wx.grid.Grid(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
-        self.grid_done.CreateGrid(10, 0)
-        self.grid_done.Hide()
+        self.grid_done = TaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
         self.sizer_left_pane.Add(self.grid_done, 1, wx.BOTTOM | wx.EXPAND | wx.RIGHT, 4)
 
         sizer_8 = wx.BoxSizer(wx.HORIZONTAL)
@@ -151,19 +149,30 @@ class AppWindowBase(wx.Frame):
         self.Layout()
         self.Centre()
 
+        self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.on_grid_tasks_select_cell, self.grid_done)
         self.Bind(wx.grid.EVT_GRID_CMD_CELL_CHANGED, self.on_grid_tasks_cell_changed, self.grid_tasks)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.on_grid_tasks_select_cell, self.grid_tasks)
+        self.Bind(wx.EVT_BUTTON, self.on_btn_cancel, self.btn_cancel)
+        self.Bind(wx.EVT_BUTTON, self.on_btn_done, self.btn_done)
         self.Bind(wx.EVT_BUTTON, self.on_btn_desc_discard, self.btn_desc_discard)
         self.Bind(wx.EVT_BUTTON, self.on_btn_desc_save, self.btn_desc_save)
         self.Bind(wx.EVT_SHOW, self.on_frame_show, self)
         # end wxGlade
 
+    def on_grid_tasks_select_cell(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'on_grid_tasks_select_cell' not implemented!")
+        event.Skip()
+
     def on_grid_tasks_cell_changed(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'on_grid_tasks_cell_changed' not implemented!")
         event.Skip()
 
-    def on_grid_tasks_select_cell(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_grid_tasks_select_cell' not implemented!")
+    def on_btn_cancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'on_btn_cancel' not implemented!")
+        event.Skip()
+
+    def on_btn_done(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'on_btn_done' not implemented!")
         event.Skip()
 
     def on_btn_desc_discard(self, event):  # wxGlade: AppWindowBase.<event_handler>
