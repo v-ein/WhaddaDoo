@@ -149,42 +149,42 @@ class AppWindowBase(wx.Frame):
         self.Layout()
         self.Centre()
 
-        self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.on_grid_tasks_select_cell, self.grid_done)
-        self.Bind(wx.grid.EVT_GRID_CMD_CELL_CHANGED, self.on_grid_tasks_cell_changed, self.grid_tasks)
-        self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.on_grid_tasks_select_cell, self.grid_tasks)
-        self.Bind(wx.EVT_BUTTON, self.on_btn_cancel, self.btn_cancel)
-        self.Bind(wx.EVT_BUTTON, self.on_btn_done, self.btn_done)
-        self.Bind(wx.EVT_BUTTON, self.on_btn_desc_discard, self.btn_desc_discard)
-        self.Bind(wx.EVT_BUTTON, self.on_btn_desc_save, self.btn_desc_save)
-        self.Bind(wx.EVT_SHOW, self.on_frame_show, self)
+        self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_done)
+        self.Bind(wx.grid.EVT_GRID_CMD_CELL_CHANGED, self.OnGridTasksCellChanged, self.grid_tasks)
+        self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_tasks)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnCancel, self.btn_cancel)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnDone, self.btn_done)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnDescDiscard, self.btn_desc_discard)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnDescSave, self.btn_desc_save)
+        self.Bind(wx.EVT_SHOW, self.OnFrameShow, self)
         # end wxGlade
 
-    def on_grid_tasks_select_cell(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_grid_tasks_select_cell' not implemented!")
+    def OnGridTasksSelectCell(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnGridTasksSelectCell' not implemented!")
         event.Skip()
 
-    def on_grid_tasks_cell_changed(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_grid_tasks_cell_changed' not implemented!")
+    def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnGridTasksCellChanged' not implemented!")
         event.Skip()
 
-    def on_btn_cancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_btn_cancel' not implemented!")
+    def OnBtnCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnCancel' not implemented!")
         event.Skip()
 
-    def on_btn_done(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_btn_done' not implemented!")
+    def OnBtnDone(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnDone' not implemented!")
         event.Skip()
 
-    def on_btn_desc_discard(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_btn_desc_discard' not implemented!")
+    def OnBtnDescDiscard(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnDescDiscard' not implemented!")
         event.Skip()
 
-    def on_btn_desc_save(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_btn_desc_save' not implemented!")
+    def OnBtnDescSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnDescSave' not implemented!")
         event.Skip()
 
-    def on_frame_show(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'on_frame_show' not implemented!")
+    def OnFrameShow(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnFrameShow' not implemented!")
         event.Skip()
 
 # end of class AppWindowBase

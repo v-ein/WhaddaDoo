@@ -4,7 +4,7 @@
 <application class="MyApp" encoding="UTF-8" for_version="3.0" header_extension=".h" indent_amount="4" indent_symbol="space" is_template="0" language="python" mark_blocks="1" name="app" option="0" overwrite="1" path="app_gui.py" source_extension=".cpp" top_window="frame" use_gettext="0" use_new_namespace="1">
     <object class="AppWindowBase" name="frame" base="EditFrame">
         <events>
-            <handler event="EVT_SHOW">on_frame_show</handler>
+            <handler event="EVT_SHOW">OnFrameShow</handler>
         </events>
         <size>650, 550</size>
         <title>WhaddaDoo</title>
@@ -82,7 +82,7 @@
                                                     <object class="TaskList" name="grid_done" base="EditGrid">
                                                         <extracode>from ui.task_list import TaskList</extracode>
                                                         <events>
-                                                            <handler event="EVT_GRID_CMD_SELECT_CELL">on_grid_tasks_select_cell</handler>
+                                                            <handler event="EVT_GRID_CMD_SELECT_CELL">OnGridTasksSelectCell</handler>
                                                         </events>
                                                         <hidden>1</hidden>
                                                         <create_grid>0</create_grid>
@@ -140,8 +140,8 @@
                                                     <object class="TaskList" name="grid_tasks" base="EditGrid">
                                                         <extracode>from ui.task_list import TaskList</extracode>
                                                         <events>
-                                                            <handler event="EVT_GRID_CMD_CELL_CHANGED">on_grid_tasks_cell_changed</handler>
-                                                            <handler event="EVT_GRID_CMD_SELECT_CELL">on_grid_tasks_select_cell</handler>
+                                                            <handler event="EVT_GRID_CMD_CELL_CHANGED">OnGridTasksCellChanged</handler>
+                                                            <handler event="EVT_GRID_CMD_SELECT_CELL">OnGridTasksSelectCell</handler>
                                                         </events>
                                                         <create_grid>0</create_grid>
                                                         <columns>
@@ -194,7 +194,7 @@
                                                                         <border>8</border>
                                                                         <object class="wxButton" name="btn_cancel" base="EditButton">
                                                                             <events>
-                                                                                <handler event="EVT_BUTTON">on_btn_cancel</handler>
+                                                                                <handler event="EVT_BUTTON">OnBtnCancel</handler>
                                                                             </events>
                                                                             <label>&amp;Cancel task</label>
                                                                         </object>
@@ -205,7 +205,7 @@
                                                                         <flag>wxLEFT</flag>
                                                                         <object class="wxButton" name="btn_done" base="EditButton">
                                                                             <events>
-                                                                                <handler event="EVT_BUTTON">on_btn_done</handler>
+                                                                                <handler event="EVT_BUTTON">OnBtnDone</handler>
                                                                             </events>
                                                                             <label>&amp;Done</label>
                                                                         </object>
@@ -252,7 +252,7 @@
                                                                                     <border>8</border>
                                                                                     <object class="wxButton" name="btn_desc_discard" base="EditButton">
                                                                                         <events>
-                                                                                            <handler event="EVT_BUTTON">on_btn_desc_discard</handler>
+                                                                                            <handler event="EVT_BUTTON">OnBtnDescDiscard</handler>
                                                                                         </events>
                                                                                         <label>Discard</label>
                                                                                     </object>
@@ -263,7 +263,7 @@
                                                                                     <flag>wxLEFT</flag>
                                                                                     <object class="wxButton" name="btn_desc_save" base="EditButton">
                                                                                         <events>
-                                                                                            <handler event="EVT_BUTTON">on_btn_desc_save</handler>
+                                                                                            <handler event="EVT_BUTTON">OnBtnDescSave</handler>
                                                                                         </events>
                                                                                         <label>&amp;Save changes</label>
                                                                                     </object>

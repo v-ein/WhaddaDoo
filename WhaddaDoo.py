@@ -58,7 +58,7 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.SetColAttr(0, read_only_cell_attr.Clone())
 
 
-        self.grid_tasks.Bind(wx.EVT_SIZE, self.on_grid_size)
+        self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
 
         self.grid_done.SetGridLineColour(wx.Colour(224, 224, 224))
         self.grid_done.AutoSizeColLabelSize(0)
@@ -73,16 +73,16 @@ class AppWindow(AppWindowBase):
         self.grid_done.SetColAttr(0, read_only_cell_attr.Clone())
         self.grid_done.SetColAttr(1, read_only_cell_attr.Clone())
 
-        self.grid_done.Bind(wx.EVT_SIZE, self.on_grid_size)
+        self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
 
         self.grid_comments.HideRowLabels()
         self.grid_comments.HideColLabels()
         self.grid_comments.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         self.grid_comments.SetDefaultCellFont(self.font)
 
-        self.grid_comments.Bind(wx.EVT_SIZE, self.on_grid_size)
+        self.grid_comments.Bind(wx.EVT_SIZE, self.OnGridSize)
 
-        self.edit_desc.Bind(wx.EVT_TEXT, self.on_edit_desc_text_change)
+        self.edit_desc.Bind(wx.EVT_TEXT, self.OnEditDescTextChange)
 
         # TODO: think about para spacing. Might be good to just leave it as is.
         # We'll need to use blank lines anyway, or otherwise it's going to be like
@@ -107,28 +107,28 @@ class AppWindow(AppWindowBase):
     def OnClose(self, event):
         # TODO: make sure it's also called when the app is being closed due to
         # the system shutdown
-        self.save_task_changes()
-        self.save_board()
+        self.SaveTaskChanges()
+        self.SaveBoard()
         event.Skip()
 
-    def on_btn_desc_discard(self, event):  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnDescDiscard(self, event):  # wxGlade: AppWindowBase.<event_handler>
         dlg = wx.MessageDialog(self, "Discard all changes you've made to the task description?", "Discard changes", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:
-            self.load_task_desc()
+            self.LoadTaskDesc()
         event.Skip()
 
-    def on_btn_desc_save(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        self.save_task_changes()
+    def OnBtnDescSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.SaveTaskChanges()
         event.Skip()
 
-    def on_edit_desc_text_change(self, event):
+    def OnEditDescTextChange(self, event):
         if not self.ignore_edit_change:
-            self.show_desc_buttons()
+            self.ShowDescButtons()
         event.Skip()
 
-    def on_grid_tasks_select_cell(self, event):
+    def OnGridTasksSelectCell(self, event):
         # This handler is used for both grid_tasks and grid_done
         grid = event.GetEventObject()
         if event.GetCol() == 0:
@@ -138,17 +138,17 @@ class AppWindow(AppWindowBase):
             event.Veto()
         else:
             # TODO: do we need to save anything before changing the selection pointer?
-            self.save_task_changes()
+            self.SaveTaskChanges()
             self.selected_task_row = event.GetRow()
             try:
-                self.selected_task = grid.GetTable().get_item(self.selected_task_row)
+                self.selected_task = grid.GetTable().GetItem(self.selected_task_row)
             except IndexError:
                 # Sometimes we might go out of range, e.g. when the table is empty
                 self.selected_task = None
-            self.load_task_details()
+            self.LoadTaskDetails()
             event.Skip()
 
-    def show_desc_buttons(self, show: bool = True):
+    def ShowDescButtons(self, show: bool = True):
         # TODO: We should probably restrict Tab navigation to this panel only,
         # i.e. rich edit box - discard - save.
 
@@ -162,7 +162,7 @@ class AppWindow(AppWindowBase):
         self.sizer_right_pane.Layout()
         # self.panel_desc_buttons.Layout()
 
-    def save_task_changes(self):
+    def SaveTaskChanges(self):
         # TODO: check if validators can/should be used instead
         task = self.selected_task
         if task is None:
@@ -180,9 +180,9 @@ class AppWindow(AppWindowBase):
             self.grid_tasks.AutoSizeRow(self.selected_task_row)
             self.grid_tasks.ForceRefresh()
 
-        self.show_desc_buttons(False)
+        self.ShowDescButtons(False)
 
-    def load_task_desc(self):
+    def LoadTaskDesc(self):
         task = self.selected_task
         # TODO: properly clear the right panel if the selected task is None
         if task is None:
@@ -190,9 +190,9 @@ class AppWindow(AppWindowBase):
         self.ignore_edit_change = True
         self.edit_desc.ChangeValue(task.get_full_desc())
         self.ignore_edit_change = False
-        self.show_desc_buttons(False)
+        self.ShowDescButtons(False)
 
-    def load_task_details(self):
+    def LoadTaskDetails(self):
         task = self.selected_task
         # TODO: properly clear the right panel if the selected task is None
         if task is None:
@@ -200,7 +200,7 @@ class AppWindow(AppWindowBase):
 
         # TODO: if the task is completed (done or cancel), disable editing
         # (except for comments).
-        self.load_task_desc()
+        self.LoadTaskDesc()
 
         # TODO: adjust edit_desc size to fit contents
         # self.edit_desc.
@@ -221,7 +221,7 @@ class AppWindow(AppWindowBase):
         # TODO: fill in the remaining controls
 
 
-    def resize_grid_columns(self, grid):
+    def ResizeGridColumns(self, grid):
         #
         # Resizes the last column in the grid to fit the client area, 
         # if possible. Then, auto-sizes all the rows because the change to
@@ -239,30 +239,30 @@ class AppWindow(AppWindowBase):
         grid.AutoSizeRows()
 
 
-    def on_grid_size(self, event):
-        self.resize_grid_columns(event.GetEventObject())
+    def OnGridSize(self, event):
+        self.ResizeGridColumns(event.GetEventObject())
         event.Skip()
 
-    def on_grid_tasks_cell_changed(self, event):  # wxGlade: AppWindowBase.<event_handler>
+    def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.grid_tasks.AutoSizeRow(event.GetRow())
         # We need to reload the description box on the right side.
-        self.load_task_details()
+        self.LoadTaskDetails()
         event.Skip()
         
 
-    def on_frame_show(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        self.resize_grid_columns(self.grid_tasks)
-        self.resize_grid_columns(self.grid_done)
-        self.resize_grid_columns(self.grid_comments)
+    def OnFrameShow(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.ResizeGridColumns(self.grid_tasks)
+        self.ResizeGridColumns(self.grid_done)
+        self.ResizeGridColumns(self.grid_comments)
         # TODO: we should iterate over the sub-directories in the repo and
         # for every directory with "tasks.yaml" inside, load it as a board.
         # We *don't know* the board name beforehand.
-        self.load_board()
+        self.LoadBoard()
         event.Skip()
 
     # TODO: think on naming conventions. Are "Save/Load" about disk I/O? If so,
     # how should we name methods dealing with memory objects and widgets?
-    def save_board(self):
+    def SaveBoard(self):
         # TODO: only save the board if it has been modified? Add a 'force' parm?
         # At least we don't want extra writing when called from OnClose().
 
@@ -295,7 +295,7 @@ class AppWindow(AppWindowBase):
             with tempfile.NamedTemporaryFile(mode="w", dir=dir_name, delete=False,
                 encoding='utf8', prefix="active.", suffix=".txt") as f:
 
-                for task in self.grid_tasks.GetTable().get_list():
+                for task in self.grid_tasks.GetTable().GetList():
                     f.write(task.id + "\n")
                 # Keep it for future reference
                 index_file_name = f.name
@@ -308,15 +308,15 @@ class AppWindow(AppWindowBase):
             # of errors, and would also help in case the old files are
             # locked (on Windows). But it's too complicated for such a
             # simple tool.
-            self.replace_file(os.path.join(dir_name, "tasks.yaml"), tasks_file_name)
-            self.replace_file(os.path.join(dir_name, "active.txt"), index_file_name)
+            self.ReplaceFile(os.path.join(dir_name, "tasks.yaml"), tasks_file_name)
+            self.ReplaceFile(os.path.join(dir_name, "active.txt"), index_file_name)
 
         except OSError:
             # TODO: !!IMPORTANT!! show an error message
             pass
 
     @staticmethod
-    def replace_file(old_name, new_name):
+    def ReplaceFile(old_name, new_name):
         try:
             os.remove(old_name)
         except FileNotFoundError:
@@ -324,7 +324,7 @@ class AppWindow(AppWindowBase):
             pass
         os.rename(new_name, old_name)
 
-    def load_board(self):
+    def LoadBoard(self):
         self.tasks_pool = {}
         active_tasks = []
 
@@ -362,7 +362,7 @@ class AppWindow(AppWindowBase):
         # TODO: verify that active_set is empty
 
         # TODO: sort tasks by completion date, newer to older
-        self.grid_done.set_task_list(list(completed_set.values()), self.tasks_pool)
+        self.grid_done.SetTaskList(list(completed_set.values()), self.tasks_pool)
         self.grid_done.AutoSizeRows()
         self.grid_done.SetGridCursor(0, 1)
 
@@ -370,26 +370,26 @@ class AppWindow(AppWindowBase):
         # first *active* task displayed in the right pane (i.e. we want
         # grid_tasks.SetGridCursor() to go after grid_done.SetGridCursor(),
         # not before it).
-        self.grid_tasks.set_task_list(active_tasks, self.tasks_pool)
+        self.grid_tasks.SetTaskList(active_tasks, self.tasks_pool)
         self.grid_tasks.AutoSizeRows()
         self.grid_tasks.SetGridCursor(0, 1)
 
-    def mark_completed(self, final_status=TaskStatus.DONE):
+    def MarkCompleted(self, final_status=TaskStatus.DONE):
         task = self.selected_task
         if task is None:
             # Nothing to do here
             return
         task.status = final_status
         self.grid_tasks.DeleteRows(self.selected_task_row)
-        self.grid_done.GetTable().insert_items(0, [task])
+        self.grid_done.GetTable().InsertItems(0, [task])
         self.grid_done.AutoSizeRow(0)
 
-    def on_btn_cancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        self.mark_completed(TaskStatus.CANCELLED)
+    def OnBtnCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.MarkCompleted(TaskStatus.CANCELLED)
         event.Skip()
 
-    def on_btn_done(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        self.mark_completed()
+    def OnBtnDone(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.MarkCompleted()
         event.Skip()
 
 
