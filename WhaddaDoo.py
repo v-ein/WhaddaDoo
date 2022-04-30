@@ -130,18 +130,18 @@ class AppWindow(AppWindowBase):
 
     def OnGridTasksSelectCell(self, event):
         # This handler is used for both grid_tasks and grid_done
-        grid = event.GetEventObject()
-        if event.GetCol() == 0:
-            event.GetEventObject().SetGridCursor(event.GetRow(), 1)
+        grid = event.EventObject
+        if event.Col == 0:
+            grid.SetGridCursor(event.Row, 1)
             # Note: we deliberately disallow the grid to handle this event, otherwise
             # it will reset the position to column 0 even after our SetGridCursor call.
             event.Veto()
         else:
             # TODO: do we need to save anything before changing the selection pointer?
             self.SaveTaskChanges()
-            self.selected_task_row = event.GetRow()
+            self.selected_task_row = event.Row
             try:
-                self.selected_task = grid.GetTable().GetItem(self.selected_task_row)
+                self.selected_task = grid.Table.GetItem(self.selected_task_row)
             except IndexError:
                 # Sometimes we might go out of range, e.g. when the table is empty
                 self.selected_task = None
@@ -168,7 +168,7 @@ class AppWindow(AppWindowBase):
         if task is None:
             return
 
-        desc = self.edit_desc.GetValue()
+        desc = self.edit_desc.Value
         paragraphs = desc.split("\n")
         summary = paragraphs[0]
         desc = "\n".join(paragraphs[1:])
@@ -205,9 +205,8 @@ class AppWindow(AppWindowBase):
         # TODO: adjust edit_desc size to fit contents
         # self.edit_desc.
         grid_comments = self.grid_comments
-        rows = grid_comments.GetNumberRows()
-        if rows > 0:
-            grid_comments.DeleteRows(0, rows)
+        if grid_comments.NumberRows > 0:
+            grid_comments.DeleteRows(0, grid_comments.NumberRows)
         grid_comments.AppendRows(2 * len(task.comments))
         row = 0
         for comment in task.comments:
@@ -227,8 +226,8 @@ class AppWindow(AppWindowBase):
         # if possible. Then, auto-sizes all the rows because the change to
         # column width might be causing changes in word wrapping.
         #
-        last_col = grid.GetNumberCols() - 1
-        new_width = grid.GetClientSize().width
+        last_col = grid.NumberCols - 1
+        new_width = grid.ClientSize.width
         for i in range(0, last_col):
             new_width -= grid.GetColSize(i)
 
@@ -240,11 +239,11 @@ class AppWindow(AppWindowBase):
 
 
     def OnGridSize(self, event):
-        self.ResizeGridColumns(event.GetEventObject())
+        self.ResizeGridColumns(event.EventObject)
         event.Skip()
 
     def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        self.grid_tasks.AutoSizeRow(event.GetRow())
+        self.grid_tasks.AutoSizeRow(event.Row)
         # We need to reload the description box on the right side.
         self.LoadTaskDetails()
         event.Skip()
@@ -295,7 +294,7 @@ class AppWindow(AppWindowBase):
             with tempfile.NamedTemporaryFile(mode="w", dir=dir_name, delete=False,
                 encoding='utf8', prefix="active.", suffix=".txt") as f:
 
-                for task in self.grid_tasks.GetTable().GetList():
+                for task in self.grid_tasks.Table.GetList():
                     f.write(task.id + "\n")
                 # Keep it for future reference
                 index_file_name = f.name
@@ -364,15 +363,15 @@ class AppWindow(AppWindowBase):
         # TODO: sort tasks by completion date, newer to older
         self.grid_done.SetTaskList(list(completed_set.values()), self.tasks_pool)
         self.grid_done.AutoSizeRows()
-        self.grid_done.SetGridCursor(0, 1)
+        self.grid_done.GoToCell(0, 1)
 
         # Note: we're loading grid_tasks after grid_done in order to get the
         # first *active* task displayed in the right pane (i.e. we want
-        # grid_tasks.SetGridCursor() to go after grid_done.SetGridCursor(),
+        # grid_tasks.GoToCell() to go after grid_done.GoToCell(),
         # not before it).
         self.grid_tasks.SetTaskList(active_tasks, self.tasks_pool)
         self.grid_tasks.AutoSizeRows()
-        self.grid_tasks.SetGridCursor(0, 1)
+        self.grid_tasks.GoToCell(0, 1)
 
     def MarkCompleted(self, final_status=TaskStatus.DONE):
         task = self.selected_task
@@ -381,7 +380,7 @@ class AppWindow(AppWindowBase):
             return
         task.status = final_status
         self.grid_tasks.DeleteRows(self.selected_task_row)
-        self.grid_done.GetTable().InsertItems(0, [task])
+        self.grid_done.Table.InsertItems(0, [task])
         self.grid_done.AutoSizeRow(0)
 
     def OnBtnCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>

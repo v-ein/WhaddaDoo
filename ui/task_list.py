@@ -57,7 +57,7 @@ class TaskListTable(wx.grid.GridTableBase):
     # here, otherwise it really looks like crap.
     def NotifyGrid(self, notification, pos, numRows):
         msg = wx.grid.GridTableMessage(self, notification, pos, numRows)
-        self.GetView().ProcessTableMessage(msg)
+        self.View.ProcessTableMessage(msg)
 
     def GetList(self):
         """
@@ -132,7 +132,7 @@ class TaskList(wx.grid.Grid):
 
     def SetTaskList(self, task_list, task_pool_):
         self.task_pool = task_pool_
-        self.GetTable().LoadList(task_list)
+        self.Table.LoadList(task_list)
 
     def GetColGridLinePen1(self, col):
         # pen = wx.Pen(wx.Colour(0, 255, 255), 1, style=wx.PENSTYLE_USER_DASH)
@@ -159,15 +159,15 @@ class TaskList(wx.grid.Grid):
 
         drag_data = {}
 
-        sel_row_blocks = self.GetSelectedRowBlocks()
+        sel_row_blocks = self.SelectedRowBlocks
         if len(sel_row_blocks) == 0:
-            cursor = self.GetGridCursorCoords()
+            cursor = self.GridCursorCoords
             sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]
 
         items = []
-        table = self.GetTable()
+        table = self.Table
         for block in sel_row_blocks:
-            items.extend([t.id for t in table.GetItems(block.GetTopRow(), block.GetBottomRow() + 1)])
+            items.extend([t.id for t in table.GetItems(block.TopRow, block.BottomRow + 1)])
         drag_data["items"] = items
 
         # TODO: maybe use JSON instead of pickle for security reasons
@@ -199,7 +199,7 @@ class TaskList(wx.grid.Grid):
             # If there was no drop into this list (i.e. dragging to another list),
             # there's no need to correct positions on deletion - we're preventing this by
             # using an insertion point beyond the end of list.
-            ins_pos = self.drop_ins_pos if (self.drop_ins_pos is not None) else self.GetNumberRows()
+            ins_pos = self.drop_ins_pos if (self.drop_ins_pos is not None) else self.NumberRows
             self.DeleteDraggedItems(sel_row_blocks, ins_pos, len(items))
 
 
@@ -262,7 +262,7 @@ class TaskList(wx.grid.Grid):
         self.drop_ins_pos = index
 
         # TODO: maybe disable repainting
-        self.GetTable().InsertItems(index, [self.task_pool.get(id, None) for id in items])
+        self.Table.InsertItems(index, [self.task_pool.get(id, None) for id in items])
 
         for i in range(0, len(items)):
             self.AutoSizeRow(index + i)
@@ -299,7 +299,7 @@ class TaskList(wx.grid.Grid):
 
     def InsertDropPlaceholder(self, row_pos):
 
-        cursor = self.GetGridCursorCoords()
+        cursor = self.GridCursorCoords
         if cursor.Row >= row_pos:
             cursor.Row += 1
             self.SetGridCursor(cursor)
@@ -327,7 +327,7 @@ class TaskList(wx.grid.Grid):
 
         self.DeleteRows(self.drop_placeholder_pos, 1)
 
-        cursor = self.GetGridCursorCoords()
+        cursor = self.GridCursorCoords
         if cursor.Row > self.drop_placeholder_pos:
             cursor.Row -= 1
             self.SetGridCursor(cursor)

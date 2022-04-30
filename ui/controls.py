@@ -10,7 +10,7 @@ class CollapseButton(wx.StaticText):
 
     def __init__(self, *arg, **kw):
         super().__init__(*arg, **kw)
-        self.caption = self.GetLabelText()
+        self.caption = self.LabelText
 
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
 
@@ -32,4 +32,4 @@ class CollapseButton(wx.StaticText):
     def Expand(self, expand=True):
         self.buddy.Show(expand)
         self.SetLabel(self.caption, expand)
-        self.buddy.GetContainingSizer().Layout()
+        self.buddy.ContainingSizer.Layout()
