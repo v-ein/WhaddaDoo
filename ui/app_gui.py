@@ -87,11 +87,24 @@ class AppWindowBase(wx.Frame):
 
         sizer_9.Add((20, 20), 1, wx.EXPAND, 0)
 
-        self.btn_cancel = wx.Button(self.panel_2, wx.ID_ANY, "&Cancel task")
-        sizer_9.Add(self.btn_cancel, 0, 0, 8)
+        self.panel_active_workflow_buttons = wx.Panel(self.panel_2, wx.ID_ANY)
+        sizer_9.Add(self.panel_active_workflow_buttons, 0, wx.EXPAND, 0)
 
-        self.btn_done = wx.Button(self.panel_2, wx.ID_ANY, "&Done")
-        sizer_9.Add(self.btn_done, 0, wx.LEFT, 8)
+        sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_cancel = wx.Button(self.panel_active_workflow_buttons, wx.ID_ANY, "&Cancel task")
+        sizer_2.Add(self.btn_cancel, 0, 0, 8)
+
+        self.btn_done = wx.Button(self.panel_active_workflow_buttons, wx.ID_ANY, "&Done")
+        sizer_2.Add(self.btn_done, 0, wx.LEFT, 8)
+
+        self.panel_completed_workflow_buttons = wx.Panel(self.panel_2, wx.ID_ANY)
+        sizer_9.Add(self.panel_completed_workflow_buttons, 0, wx.EXPAND, 0)
+
+        sizer_10 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_reopen = wx.Button(self.panel_completed_workflow_buttons, wx.ID_ANY, "&Reopen")
+        sizer_10.Add(self.btn_reopen, 0, 0, 0)
 
         sizer_3 = wx.BoxSizer(wx.VERTICAL)
         self.sizer_right_pane.Add(sizer_3, 1, wx.EXPAND, 0)
@@ -134,6 +147,10 @@ class AppWindowBase(wx.Frame):
 
         self.panel_desc_buttons.SetSizer(sizer_desc_buttons)
 
+        self.panel_completed_workflow_buttons.SetSizer(sizer_10)
+
+        self.panel_active_workflow_buttons.SetSizer(sizer_2)
+
         self.panel_2.SetSizer(self.sizer_right_pane)
 
         self.window_1_pane_2.SetSizer(sizer_4)
@@ -154,6 +171,7 @@ class AppWindowBase(wx.Frame):
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_tasks)
         self.Bind(wx.EVT_BUTTON, self.OnBtnCancel, self.btn_cancel)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDone, self.btn_done)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnReopen, self.btn_reopen)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescDiscard, self.btn_desc_discard)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescSave, self.btn_desc_save)
         self.Bind(wx.EVT_SHOW, self.OnFrameShow, self)
@@ -173,6 +191,10 @@ class AppWindowBase(wx.Frame):
 
     def OnBtnDone(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnBtnDone' not implemented!")
+        event.Skip()
+
+    def OnBtnReopen(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnReopen' not implemented!")
         event.Skip()
 
     def OnBtnDescDiscard(self, event):  # wxGlade: AppWindowBase.<event_handler>

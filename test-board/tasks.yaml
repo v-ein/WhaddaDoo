@@ -33,7 +33,7 @@ zzzzzzy:
   status: active
   desc: test - line 1
 '2':
-  status: done
+  status: cancelled
   desc: test - line 2
 '3':
   status: active

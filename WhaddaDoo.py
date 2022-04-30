@@ -201,9 +201,15 @@ class AppWindow(AppWindowBase):
         # TODO: if the task is completed (done or cancel), disable editing
         # (except for comments).
         self.LoadTaskDesc()
-
+        # TODO: think whether we want to gray it out
+        is_active = (task.status == TaskStatus.ACTIVE)
+        self.edit_desc.Enabled = is_active
+        self.panel_active_workflow_buttons.Show(is_active)
+        self.panel_completed_workflow_buttons.Show(not is_active)
+        self.panel_active_workflow_buttons.ContainingSizer.Layout()
         # TODO: adjust edit_desc size to fit contents
         # self.edit_desc.
+
         grid_comments = self.grid_comments
         rows = grid_comments.GetNumberRows()
         if rows > 0:
@@ -383,6 +389,28 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.DeleteRows(self.selected_task_row)
         self.grid_done.GetTable().InsertItems(0, [task])
         self.grid_done.AutoSizeRow(0)
+        # TODO: store the close date in Task attributes
+
+        # We need to refresh the right panel so that the controls get into
+        # correct state.
+        self.LoadTaskDetails()
+
+    def ReopenTask(self):
+        task = self.selected_task
+        if task is None:
+            # Nothing to do here
+            return
+        task.status = TaskStatus.ACTIVE
+        self.grid_done.DeleteRows(self.selected_task_row)
+        self.grid_tasks.GetTable().InsertItems(0, [task])
+        self.grid_tasks.AutoSizeRow(0)
+        # TODO: add a comment like 'Reopened' to somehow remember the date.
+        # It would be nice to also store the date when the task was closed
+        # last time.
+        
+        # We need to refresh the right panel so that the controls get into
+        # correct state.
+        self.LoadTaskDetails()
 
     def OnBtnCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.MarkCompleted(TaskStatus.CANCELLED)
@@ -390,6 +418,10 @@ class AppWindow(AppWindowBase):
 
     def OnBtnDone(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.MarkCompleted()
+        event.Skip()
+
+    def OnBtnReopen(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.ReopenTask()
         event.Skip()
 
 
