@@ -57,8 +57,8 @@ class AppWindow(AppWindowBase):
         read_only_cell_attr.SetReadOnly()
         self.grid_tasks.SetColAttr(0, read_only_cell_attr.Clone())
 
-
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
+        self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)
 
         self.grid_done.SetGridLineColour(wx.Colour(224, 224, 224))
         self.grid_done.AutoSizeColLabelSize(0)
@@ -70,8 +70,7 @@ class AppWindow(AppWindowBase):
         self.grid_done.DisableDragRowSize()
         self.grid_done.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         self.grid_done.SetDefaultCellFont(self.font)
-        self.grid_done.SetColAttr(0, read_only_cell_attr.Clone())
-        self.grid_done.SetColAttr(1, read_only_cell_attr.Clone())
+        self.grid_done.EnableEditing(False)
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
 
@@ -126,6 +125,11 @@ class AppWindow(AppWindowBase):
     def OnEditDescTextChange(self, event):
         if not self.ignore_edit_change:
             self.ShowDescButtons()
+        event.Skip()
+
+    def OnGridChar(self, event):
+        if event.KeyCode == wx.WXK_INSERT and not event.HasAnyModifiers():
+            self.InsertNewTask(self.grid_tasks.GridCursorRow)
         event.Skip()
 
     def OnGridTasksSelectCell(self, event):
@@ -412,6 +416,14 @@ class AppWindow(AppWindowBase):
         # correct state.
         self.LoadTaskDetails()
 
+    def InsertNewTask(self, row):
+        task = Task()
+        self.tasks_pool[task.id] = task
+        self.grid_tasks.Table.InsertItems(row, [task])
+        self.grid_tasks.AutoSizeRow(row)
+        self.grid_tasks.SetGridCursor(row, 1)
+        self.grid_tasks.EnableCellEditControl()
+
     def OnBtnCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.MarkCompleted(TaskStatus.CANCELLED)
         event.Skip()
@@ -422,6 +434,10 @@ class AppWindow(AppWindowBase):
 
     def OnBtnReopen(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.ReopenTask()
+        event.Skip()
+
+    def OnBtnNewTask(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.InsertNewTask(0)
         event.Skip()
 
 

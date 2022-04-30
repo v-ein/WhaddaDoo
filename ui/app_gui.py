@@ -64,13 +64,16 @@ class AppWindowBase(wx.Frame):
 
         self.label_active = ui.controls.CollapseButton(self.window_1_pane_1, wx.ID_ANY, "Active")
         self.label_active.SetFont(wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Segoe UI"))
-        sizer_8.Add(self.label_active, 0, wx.BOTTOM | wx.TOP, 4)
+        sizer_8.Add(self.label_active, 0, wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM | wx.TOP, 4)
 
         static_line_2 = wx.StaticLine(self.window_1_pane_1, wx.ID_ANY)
         sizer_8.Add(static_line_2, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
 
+        self.btn_new_task = wx.Button(self.window_1_pane_1, wx.ID_ANY, "&New task")
+        sizer_8.Add(self.btn_new_task, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+
         self.grid_tasks = TaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
-        self.sizer_left_pane.Add(self.grid_tasks, 2, wx.EXPAND | wx.RIGHT, 4)
+        self.sizer_left_pane.Add(self.grid_tasks, 2, wx.EXPAND | wx.RIGHT | wx.TOP, 4)
 
         self.window_1_pane_2 = wx.Panel(self.window_1, wx.ID_ANY)
 
@@ -167,6 +170,7 @@ class AppWindowBase(wx.Frame):
         self.Centre()
 
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_done)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnNewTask, self.btn_new_task)
         self.Bind(wx.grid.EVT_GRID_CMD_CELL_CHANGED, self.OnGridTasksCellChanged, self.grid_tasks)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_tasks)
         self.Bind(wx.EVT_BUTTON, self.OnBtnCancel, self.btn_cancel)
@@ -179,6 +183,10 @@ class AppWindowBase(wx.Frame):
 
     def OnGridTasksSelectCell(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnGridTasksSelectCell' not implemented!")
+        event.Skip()
+
+    def OnBtnNewTask(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnNewTask' not implemented!")
         event.Skip()
 
     def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
