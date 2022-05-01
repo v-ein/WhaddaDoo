@@ -2,6 +2,7 @@
 # License: http://opensource.org/licenses/MIT
 # 
 import wx
+from impl.task import TaskComment
 
 class CommentAttrProvider(wx.grid.GridCellAttrProvider):
     date_attr = None
@@ -102,6 +103,13 @@ class CommentTable(wx.grid.GridTableBase):
     #     """Inserts the passed Task objects into the list, updating the grid."""
     #     self.task_list[pos:pos] = items
     #     self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, len(items))
+
+    def AddNewComment(self, comment_text=""):
+        comment = TaskComment(comment_text)
+        row = self.GetNumberRows()
+        self.comment_list.append(comment)
+        self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, row, 2)
+        return comment
 
     def SetList(self, new_list):
         """

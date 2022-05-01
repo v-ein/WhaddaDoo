@@ -130,18 +130,49 @@ class AppWindowBase(wx.Frame):
         self.btn_desc_save = wx.Button(self.panel_desc_buttons, wx.ID_ANY, "&Save changes")
         sizer_desc_buttons.Add(self.btn_desc_save, 0, wx.LEFT, 8)
 
-        self.sizer_right_pane.Add((20, 16), 0, 0, 0)
+        self.panel_3 = wx.Panel(self.panel_2, wx.ID_ANY)
+        self.sizer_right_pane.Add(self.panel_3, 2, wx.EXPAND | wx.TOP, 16)
 
-        self.grid_comments = CommentList(self.panel_2, wx.ID_ANY, size=(1, 1))
-        self.sizer_right_pane.Add(self.grid_comments, 2, wx.EXPAND, 0)
+        sizer_11 = wx.BoxSizer(wx.VERTICAL)
+
+        self.grid_comments = CommentList(self.panel_3, wx.ID_ANY, size=(1, 1))
+        sizer_11.Add(self.grid_comments, 1, wx.EXPAND, 0)
+
+        self.edit_comment = wx.richtext.RichTextCtrl(self.panel_3, wx.ID_ANY)
+        self.edit_comment.SetMinSize((-1, 80))
+        self.edit_comment.Hide()
+        sizer_11.Add(self.edit_comment, 0, wx.EXPAND | wx.TOP, 8)
 
         sizer_5 = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_right_pane.Add(sizer_5, 0, wx.EXPAND | wx.TOP, 8)
+        sizer_11.Add(sizer_5, 0, wx.EXPAND | wx.TOP, 8)
 
         sizer_5.Add((20, 20), 1, wx.EXPAND, 0)
 
-        self.btn_comment = wx.Button(self.panel_2, wx.ID_ANY, "Co&mment")
-        sizer_5.Add(self.btn_comment, 0, 0, 0)
+        self.panel_comment_edit_buttons = wx.Panel(self.panel_3, wx.ID_ANY)
+        self.panel_comment_edit_buttons.Hide()
+        sizer_5.Add(self.panel_comment_edit_buttons, 0, wx.EXPAND, 0)
+
+        sizer_13 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_comment_cancel = wx.Button(self.panel_comment_edit_buttons, wx.ID_ANY, "Cancel")
+        sizer_13.Add(self.btn_comment_cancel, 0, 0, 0)
+
+        self.btn_comment_save = wx.Button(self.panel_comment_edit_buttons, wx.ID_ANY, "Apply")
+        sizer_13.Add(self.btn_comment_save, 0, wx.LEFT, 8)
+
+        self.panel_comment_buttons = wx.Panel(self.panel_3, wx.ID_ANY)
+        sizer_5.Add(self.panel_comment_buttons, 0, wx.EXPAND, 0)
+
+        sizer_12 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_comment = wx.Button(self.panel_comment_buttons, wx.ID_ANY, "Co&mment")
+        sizer_12.Add(self.btn_comment, 0, 0, 0)
+
+        self.panel_comment_buttons.SetSizer(sizer_12)
+
+        self.panel_comment_edit_buttons.SetSizer(sizer_13)
+
+        self.panel_3.SetSizer(sizer_11)
 
         self.panel_desc_buttons.SetSizer(sizer_desc_buttons)
 
@@ -173,6 +204,9 @@ class AppWindowBase(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnBtnReopen, self.btn_reopen)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescDiscard, self.btn_desc_discard)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescSave, self.btn_desc_save)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnCommentCancel, self.btn_comment_cancel)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnCommentSave, self.btn_comment_save)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnComment, self.btn_comment)
         self.Bind(wx.EVT_SHOW, self.OnFrameShow, self)
         # end wxGlade
 
@@ -206,6 +240,18 @@ class AppWindowBase(wx.Frame):
 
     def OnBtnDescSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnBtnDescSave' not implemented!")
+        event.Skip()
+
+    def OnBtnCommentCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnCommentCancel' not implemented!")
+        event.Skip()
+
+    def OnBtnCommentSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnCommentSave' not implemented!")
+        event.Skip()
+
+    def OnBtnComment(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnComment' not implemented!")
         event.Skip()
 
     def OnFrameShow(self, event):  # wxGlade: AppWindowBase.<event_handler>

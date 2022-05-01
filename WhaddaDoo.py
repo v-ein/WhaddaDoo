@@ -99,7 +99,8 @@ class AppWindow(AppWindowBase):
         # Will text without blank lines become unreadable?
         style = wx.TextAttr(wx.Colour(0, 0, 0), font=self.font)
         style.SetParagraphSpacingAfter(8)
-        self.edit_desc.SetDefaultStyle(style)
+        self.edit_desc.SetDefaultStyle(wx.TextAttr(style))
+        self.edit_comment.SetDefaultStyle(wx.TextAttr(style))
 
         self.label_done.SetBuddy(self.grid_done)
         self.label_active.SetBuddy(self.grid_tasks)
@@ -434,6 +435,41 @@ class AppWindow(AppWindowBase):
 
     def OnBtnNewTask(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.InsertNewTask(0)
+        event.Skip()
+
+    def ShowCommentEditor(self, show=True):
+        self.edit_comment.Show(show)
+        self.panel_comment_buttons.Show(not show)
+        self.panel_comment_edit_buttons.Show(show)
+        self.edit_comment.ContainingSizer.Layout()
+
+    def OnBtnComment(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        if self.selected_task is None:
+            event.Skip()
+            return
+        # When the user clicks "Comment", we open the editor but don't add the
+        # comment to the list just yet.
+        self.edit_comment.Value = ""
+        self.ShowCommentEditor()
+        self.edit_comment.SetFocus()
+        # comment = self.grid_comments.Table.AddNewComment()
+        # self.grid_comments.GoToCell(self.grid_comments.NumberRows - 1, 0)
+        # self.selected_task.comments.append()
+        event.Skip()
+
+    def OnBtnCommentCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        # Just hiding the editor and doing nothing else.
+        self.ShowCommentEditor(False)
+        event.Skip()
+
+    def OnBtnCommentSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.grid_comments.Table.AddNewComment(self.edit_comment.Value)
+        self.ShowCommentEditor(False)
+        last_row = self.grid_comments.NumberRows - 1
+        self.grid_comments.AutoSizeRow(last_row - 1)
+        self.grid_comments.AutoSizeRow(last_row)
+        self.grid_comments.GoToCell(last_row, 0)
+        self.grid_comments.SetFocus()
         event.Skip()
 
 
