@@ -11,6 +11,7 @@ import wx.grid
 # end wxGlade
 
 # begin wxGlade: extracode
+from ui.comment_list import CommentList
 import wx.richtext
 from ui.task_list import TaskList
 import ui.controls
@@ -131,13 +132,7 @@ class AppWindowBase(wx.Frame):
 
         self.sizer_right_pane.Add((20, 16), 0, 0, 0)
 
-        self.grid_comments = wx.grid.Grid(self.panel_2, wx.ID_ANY, size=(1, 1))
-        self.grid_comments.CreateGrid(10, 1)
-        self.grid_comments.EnableDragColSize(0)
-        self.grid_comments.EnableDragRowSize(0)
-        self.grid_comments.EnableDragGridSize(0)
-        self.grid_comments.SetGridLineColour(wx.Colour(224, 224, 224))
-        self.grid_comments.SetColLabelValue(0, "Text")
+        self.grid_comments = CommentList(self.panel_2, wx.ID_ANY, size=(1, 1))
         self.sizer_right_pane.Add(self.grid_comments, 2, wx.EXPAND, 0)
 
         sizer_5 = wx.BoxSizer(wx.HORIZONTAL)

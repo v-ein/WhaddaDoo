@@ -10,6 +10,7 @@ import wx
 from impl.task import Task, TaskComment, TaskStatus
 from ui.app_gui import AppWindowBase
 import yaml
+from ui.comment_list import CommentAttrProvider
 
 # TODO: move to impl
 class NoAliasDumper(yaml.Dumper):
@@ -78,6 +79,13 @@ class AppWindow(AppWindowBase):
         self.grid_comments.HideColLabels()
         self.grid_comments.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         self.grid_comments.SetDefaultCellFont(self.font)
+        self.grid_comments.EnableEditing(False)
+        self.grid_comments.SetGridLineColour(wx.Colour(224, 224, 224))
+        # Unfortunately Table doesn't take ownership on SetAttrProvider(), 
+        # even though the doc says otherwise. We need to keep this object around
+        # until the table gets destroyed (i.e. until the frame is closed).
+        self.comment_attr_provider = CommentAttrProvider()
+        self.grid_comments.Table.SetAttrProvider(self.comment_attr_provider)
 
         self.grid_comments.Bind(wx.EVT_SIZE, self.OnGridSize)
 
@@ -214,19 +222,7 @@ class AppWindow(AppWindowBase):
         # TODO: adjust edit_desc size to fit contents
         # self.edit_desc.
 
-        grid_comments = self.grid_comments
-        rows = grid_comments.GetNumberRows()
-        if rows > 0:
-            grid_comments.DeleteRows(0, rows)
-        grid_comments.AppendRows(2 * len(task.comments))
-        row = 0
-        for comment in task.comments:
-            # TODO: format it properly
-            # TODO: set cell attributes (or use a custom attribute provider to
-            # implement striping)
-            grid_comments.SetCellValue(row, 0, comment.date.isoformat(' ', 'seconds'))
-            grid_comments.SetCellValue(row + 1, 0, comment.text)
-            row += 2
+        self.grid_comments.Table.SetList(task.comments)
         self.grid_comments.AutoSizeRows()
         # TODO: fill in the remaining controls
 
