@@ -77,6 +77,8 @@ class AppWindow(AppWindowBase):
 
         self.grid_comments.HideRowLabels()
         self.grid_comments.HideColLabels()
+        self.grid_comments.DisableDragColSize()
+        self.grid_comments.DisableDragRowSize()
         self.grid_comments.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         self.grid_comments.SetDefaultCellFont(self.font)
         self.grid_comments.EnableEditing(False)
@@ -463,7 +465,8 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def OnBtnCommentSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        self.grid_comments.Table.AddNewComment(self.edit_comment.Value)
+        comment = TaskComment(self.edit_comment.Value)
+        self.grid_comments.Table.AddNewComment(comment)
         self.ShowCommentEditor(False)
         last_row = self.grid_comments.NumberRows - 1
         self.grid_comments.AutoSizeRow(last_row - 1)

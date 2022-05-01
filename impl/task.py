@@ -57,12 +57,12 @@ class Task:
     deadline: datetime.date = None
     epic: Epic = None
     labels = None
-
-    # TODO: we need the date when the task was marked as 'done' or 'cancelled'.
-    # If only to sort the tasks in the 'done' list. Maybe also creation date?
+    creation_date: datetime.datetime = None
+    close_date: datetime.datetime = None
 
     def __init__(self, *arg, **kw):
         self.gen_id()
+        self.creation_date = datetime.datetime.now()
         self.comments = []
         self.labels = []
 
@@ -126,6 +126,9 @@ class Task:
         # in the output file.
         filtered = {
             "status": data.status,
+            "created": data.creation_date,
+            "closed": data.close_date,
+            "deadline": data.deadline,
             "labels": data.labels if len(data.labels) > 0 
                 else None,
             "epic": data.epic.name if data.epic is not None 
@@ -136,6 +139,13 @@ class Task:
         }
         filtered = dict((k, v) for (k, v) in filtered.items() if v is not None)
         return dumper.represent_mapping('tag:yaml.org,2002:map', filtered)
+
+    @staticmethod
+    def date_from_yaml(value):
+        if type(value) is str:
+            value = datetime.datetime.fromisoformat(value)
+        return value if type(value) is datetime.datetime \
+            else None
 
     @staticmethod
     def from_plain_object(id, obj):
@@ -162,10 +172,22 @@ class Task:
             # TODO: make sure it's a list
             for c in obj["comments"]:
                 if "text" in c and "date" in c:
-                    d = c["date"]
-                    if type(d) is str:
-                        d = datetime.datetime.fromisoformat(d)
-                    if type(d) is datetime.datetime:
+                    d = Task.date_from_yaml(c["date"])
+                    if d is not None:
                         task.comments.append(TaskComment(c["text"], d))
+
+        # TODO: surely it can be simplified. And less copy-paste, please.
+        if "created" in obj:
+            d = Task.date_from_yaml(obj["created"])
+            if d is not None:
+                task.creation_date = d
+        if "closed" in obj:
+            d = Task.date_from_yaml(obj["closed"])
+            if d is not None:
+                task.close_date = d
+        if "deadline" in obj:
+            d = Task.date_from_yaml(obj["deadline"])
+            if d is not None:
+                task.deadline = d
         return task
     
