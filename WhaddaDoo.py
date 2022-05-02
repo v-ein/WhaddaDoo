@@ -112,6 +112,8 @@ class AppWindow(AppWindowBase):
         # grid explicitly.
         self.label_done.Expand(False)
 
+        self.date_deadline.SetNullText("")
+
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, event):
@@ -206,6 +208,7 @@ class AppWindow(AppWindowBase):
         self.edit_desc.ChangeValue(task.get_full_desc())
         self.ignore_edit_change = False
         self.ShowDescButtons(False)
+        # TODO: adjust edit_desc size to fit contents
 
     def LoadTaskDetails(self):
         task = self.selected_task
@@ -222,8 +225,27 @@ class AppWindow(AppWindowBase):
         self.panel_active_workflow_buttons.Show(is_active)
         self.panel_completed_workflow_buttons.Show(not is_active)
         self.panel_active_workflow_buttons.ContainingSizer.Layout()
-        # TODO: adjust edit_desc size to fit contents
-        # self.edit_desc.
+
+        self.label_created.LabelText = task.creation_date.isoformat(" ", "minutes")
+        has_close_date = task.close_date is not None
+        if has_close_date:
+            self.label_closed.LabelText = task.close_date.isoformat(" ", "minutes")
+        self.panel_closed_date.Show(has_close_date)
+        self.panel_closed_date.ContainingSizer.Layout()
+
+        self.edit_labels.Value = " ".join(task.labels)
+
+        if task.deadline is None:
+            self.date_deadline.Value = wx.DefaultDateTime
+        else:
+            d = task.deadline
+            self.date_deadline.Value = wx.DateTime.FromDMY(d.day, d.month, d.year)
+        self.date_deadline.Enabled = is_active
+
+        # TODO: make sure this works as expected. We also need to pre-populate
+        # combo_epic with a list of epic names.
+        self.combo_epic.Value = task.epic.name if task.epic is not None else ""
+        self.combo_epic.Enabled = is_active
 
         self.grid_comments.Table.SetList(task.comments)
         self.grid_comments.AutoSizeRows()

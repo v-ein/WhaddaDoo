@@ -7,6 +7,7 @@
 import wx
 
 # begin wxGlade: dependencies
+import wx.adv
 import wx.grid
 # end wxGlade
 
@@ -114,11 +115,11 @@ class AppWindowBase(wx.Frame):
         self.sizer_right_pane.Add(sizer_3, 1, wx.EXPAND, 0)
 
         self.edit_desc = wx.richtext.RichTextCtrl(self.panel_2, wx.ID_ANY)
-        sizer_3.Add(self.edit_desc, 1, wx.BOTTOM | wx.EXPAND | wx.TOP, 8)
+        sizer_3.Add(self.edit_desc, 1, wx.EXPAND | wx.TOP, 8)
 
         self.panel_desc_buttons = wx.Panel(self.panel_2, wx.ID_ANY)
         self.panel_desc_buttons.Hide()
-        sizer_3.Add(self.panel_desc_buttons, 0, wx.EXPAND, 0)
+        sizer_3.Add(self.panel_desc_buttons, 0, wx.EXPAND | wx.TOP, 8)
 
         sizer_desc_buttons = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -129,6 +130,51 @@ class AppWindowBase(wx.Frame):
 
         self.btn_desc_save = wx.Button(self.panel_desc_buttons, wx.ID_ANY, "&Save changes")
         sizer_desc_buttons.Add(self.btn_desc_save, 0, wx.LEFT, 8)
+
+        sizer_14 = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_right_pane.Add(sizer_14, 0, wx.EXPAND | wx.TOP, 8)
+
+        label_1 = wx.StaticText(self.panel_2, wx.ID_ANY, "Created:")
+        sizer_14.Add(label_1, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+
+        self.label_created = wx.StaticText(self.panel_2, wx.ID_ANY, "01.01.2022")
+        sizer_14.Add(self.label_created, 1, wx.ALIGN_CENTER_VERTICAL, 0)
+
+        label_2 = wx.StaticText(self.panel_2, wx.ID_ANY, "Deadline:")
+        sizer_14.Add(label_2, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+
+        self.date_deadline = wx.adv.DatePickerCtrl(self.panel_2, wx.ID_ANY, style=wx.adv.DP_ALLOWNONE | wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.adv.DP_SHOWCENTURY)
+        sizer_14.Add(self.date_deadline, 1, 0, 8)
+
+        self.panel_closed_date = wx.Panel(self.panel_2, wx.ID_ANY)
+        self.panel_closed_date.Hide()
+        self.sizer_right_pane.Add(self.panel_closed_date, 0, wx.EXPAND | wx.TOP, 8)
+
+        sizer_18 = wx.BoxSizer(wx.HORIZONTAL)
+
+        label_5 = wx.StaticText(self.panel_closed_date, wx.ID_ANY, "Completed:")
+        sizer_18.Add(label_5, 0, 0, 0)
+
+        self.label_closed = wx.StaticText(self.panel_closed_date, wx.ID_ANY, "01.01.2022")
+        sizer_18.Add(self.label_closed, 0, 0, 0)
+
+        sizer_15 = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_right_pane.Add(sizer_15, 0, wx.EXPAND | wx.TOP, 8)
+
+        label_3 = wx.StaticText(self.panel_2, wx.ID_ANY, "Epic:")
+        sizer_15.Add(label_3, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+
+        self.combo_epic = wx.ComboBox(self.panel_2, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        sizer_15.Add(self.combo_epic, 1, wx.ALIGN_CENTER_VERTICAL, 0)
+
+        sizer_16 = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_right_pane.Add(sizer_16, 0, wx.EXPAND | wx.TOP, 8)
+
+        label_4 = wx.StaticText(self.panel_2, wx.ID_ANY, "Labels:")
+        sizer_16.Add(label_4, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT, 4)
+
+        self.edit_labels = wx.TextCtrl(self.panel_2, wx.ID_ANY, "")
+        sizer_16.Add(self.edit_labels, 1, wx.ALIGN_CENTER_VERTICAL, 0)
 
         self.panel_3 = wx.Panel(self.panel_2, wx.ID_ANY)
         self.sizer_right_pane.Add(self.panel_3, 2, wx.EXPAND | wx.TOP, 16)
@@ -173,6 +219,8 @@ class AppWindowBase(wx.Frame):
         self.panel_comment_edit_buttons.SetSizer(sizer_13)
 
         self.panel_3.SetSizer(sizer_11)
+
+        self.panel_closed_date.SetSizer(sizer_18)
 
         self.panel_desc_buttons.SetSizer(sizer_desc_buttons)
 
