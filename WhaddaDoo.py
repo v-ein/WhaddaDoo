@@ -34,6 +34,15 @@ class AppWindow(AppWindowBase):
     # gets fixed.
     ignore_edit_change = False
 
+    STATUS_LABELS = {
+        TaskStatus.ACTIVE: "",
+        TaskStatus.DONE: "Done",
+        # Using American spelling in the UI to be consistent with the rest of
+        # text; the code uses British spelling because that's how I like it to be.
+        # Might as well refactor in future.
+        TaskStatus.CANCELLED: "Canceled"
+    }
+
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
 
@@ -225,6 +234,10 @@ class AppWindow(AppWindowBase):
         self.panel_active_workflow_buttons.Show(is_active)
         self.panel_completed_workflow_buttons.Show(not is_active)
         self.panel_active_workflow_buttons.ContainingSizer.Layout()
+
+        # TODO: with the default font, it looks really weird. Need to change
+        # something. Maybe add an icon, too.
+        # self.label_status.LabelText = self.STATUS_LABELS[task.status]
 
         self.label_created.LabelText = task.creation_date.isoformat(" ", "minutes")
         has_close_date = task.close_date is not None

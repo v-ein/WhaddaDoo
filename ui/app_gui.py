@@ -90,6 +90,10 @@ class AppWindowBase(wx.Frame):
         sizer_9 = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_right_pane.Add(sizer_9, 0, wx.EXPAND, 0)
 
+        self.label_status = wx.StaticText(self.panel_2, wx.ID_ANY, "")
+        self.label_status.SetFont(wx.Font(8, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, 0, ""))
+        sizer_9.Add(self.label_status, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+
         sizer_9.Add((20, 20), 1, wx.EXPAND, 0)
 
         self.panel_active_workflow_buttons = wx.Panel(self.panel_2, wx.ID_ANY)

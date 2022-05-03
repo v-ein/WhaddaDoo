@@ -192,6 +192,22 @@
                                                                 <object class="wxBoxSizer" name="sizer_9" base="EditBoxSizer">
                                                                     <orient>wxHORIZONTAL</orient>
                                                                     <object class="sizeritem">
+                                                                        <option>0</option>
+                                                                        <border>0</border>
+                                                                        <flag>wxALIGN_CENTER_VERTICAL</flag>
+                                                                        <object class="wxStaticText" name="label_status" base="EditStaticText">
+                                                                            <font>
+                                                                                <size>8</size>
+                                                                                <family>default</family>
+                                                                                <style>normal</style>
+                                                                                <weight>bold</weight>
+                                                                                <underlined>0</underlined>
+                                                                                <face />
+                                                                            </font>
+                                                                            <attribute>1</attribute>
+                                                                        </object>
+                                                                    </object>
+                                                                    <object class="sizeritem">
                                                                         <option>1</option>
                                                                         <border>0</border>
                                                                         <flag>wxEXPAND</flag>
