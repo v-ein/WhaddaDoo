@@ -164,7 +164,7 @@ class AppWindowBase(wx.Frame):
         label_3 = wx.StaticText(self.panel_2, wx.ID_ANY, "Epic:")
         sizer_15.Add(label_3, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
 
-        self.combo_epic = wx.ComboBox(self.panel_2, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN)
+        self.combo_epic = wx.ComboBox(self.panel_2, wx.ID_ANY, choices=[], style=wx.CB_DROPDOWN | wx.CB_READONLY)
         sizer_15.Add(self.combo_epic, 1, wx.ALIGN_CENTER_VERTICAL, 0)
 
         sizer_16 = wx.BoxSizer(wx.HORIZONTAL)
