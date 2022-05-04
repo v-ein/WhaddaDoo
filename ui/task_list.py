@@ -184,8 +184,7 @@ class TaskList(wx.grid.Grid):
         # We need to detect whether we're dropping to the same list where the items
         # originated from. It's a dirty trick but I couldn't quickly find a better way.
         self.drop_ins_pos = None
-        # TODO: initialize drag_start_row with the row the mouse is pointing at
-        # (probably get it from `event`)
+        self.drag_start_row = event.Row
 
         # Create drop source and begin drag-and-drop.
         drag_source = wx.DropSource(self)
@@ -208,17 +207,31 @@ class TaskList(wx.grid.Grid):
         Delete the specified rows from the list, correcting row positions
         as necessary for the drag-and-drop insertion that occurred earler.
         """
+        cursor_row = self.GridCursorRow
         # Going through the row blocks bottom-up and deleting them
-        for block in reversed(row_blocks):
-            # If we're dropping items to the same list, we need to correct
-            # the row indices below the insertion point
-            # TODO: this is not going to work if we drop the rows in the middle
-            # of a row block. We need to handle this on a per-row basis, or maybe
-            # split each block
-            start = block.TopRow
-            if start >= ins_pos:
-                start += ins_len
-            self.DeleteRows(start, block.BottomRow - block.TopRow + 1)
+        with wx.grid.GridUpdateLocker(self):
+            for block in reversed(row_blocks):
+                # If we're dropping items to the same list, we need to correct
+                # the row indices below the insertion point
+                # TODO: this is not going to work if we drop the rows in the middle
+                # of a row block. We need to handle this on a per-row basis, or maybe
+                # split each block
+                start = block.TopRow
+                if start >= ins_pos:
+                    start += ins_len
+                block_size = block.BottomRow - block.TopRow + 1
+                self.DeleteRows(start, block_size)
+                # Correcting cursor position
+                # TODO: think if we can correct cursor position in response to insert/delete
+                # events rather than micro-manage it here and there. Right now, cursor
+                # correction doesn't work properly when the last item in the list is
+                # being dragged - events should probably resolve this.
+                # TODO: this, again, is not going to work if the cursor is in the
+                # middle of a selected block.
+                if start < cursor_row:
+                    cursor_row -= block_size
+
+            self.GoToCell(cursor_row, self.GridCursorCol)
 
 
     def InsertDroppedItems(self, x, y, items):
@@ -261,50 +274,43 @@ class TaskList(wx.grid.Grid):
         # important if we're dragging items from the same list.
         self.drop_ins_pos = index
 
-        # TODO: maybe disable repainting
-        self.GetTable().InsertItems(index, [self.task_pool.get(id, None) for id in items])
+        with wx.grid.GridUpdateLocker(self):
+            self.DeleteDropPlaceholder()
+            self.GetTable().InsertItems(index, [self.task_pool.get(id, None) for id in items])
 
-        for i in range(0, len(items)):
-            self.AutoSizeRow(index + i)
+            for i in range(0, len(items)):
+                self.AutoSizeRow(index + i)
 
-        # TODO: set cursor or selection to the items we've just inserted
-        # if len(items) == 1:
-        #     self.SetGridCursor()
+            # TODO: set cursor or selection to the items we've just inserted
+            # (still need the 'else' branch here)
+            if len(items) == 1:
+                self.SetGridCursor(index, 1)
+
 
     def MoveDropPlaceholder(self, x, y):
 
         # First see what row the y coord is pointing at
-        # TODO: coords need to be translated!! (well, we should use GetDropRow anyway)
-        index = self.YToRow(y)
-        
+        index = self.GetDropRow(x, y)
+
         # If it's pointing at the current placeholder position, nothing to do here
         if index == self.drop_placeholder_pos:
             return
 
-        # TODO: it's incorrect to determine drop position after deleting the placeholder.
-        # We need to take the placeholder pos into account in GetDropRow(), and
-        # if it returns something different from the current pos, then
-        # delete and re-insert it right away.
-        self.DeleteDropPlaceholder()
-
-        # TODO: if the new position is pointing at drag_start_row (or the next row!),
-        # we should not insert a placeholder. The drag operation should be cancelled
-        # in this case.
-
-        # We're not using the index calculated above because the actual insertion
-        # point might be different depending on which grid line is closest to
-        # the mouse position.
-        self.InsertDropPlaceholder(self.GetDropRow(x, y))
-
+        with wx.grid.GridUpdateLocker(self):
+            self.DeleteDropPlaceholder()
+            # We're not inserting a placeholder if no actual move is going to happen
+            # at the drop position - that is, when the supposed insertion point is
+            # pointing at the row being dragged, or at the next row.
+            if index < self.drag_start_row or index > self.drag_start_row + 1:
+                self.InsertDropPlaceholder(index)
 
     def InsertDropPlaceholder(self, row_pos):
 
         cursor = self.GetGridCursorCoords()
+        self.InsertRows(row_pos, 1)
         if cursor.Row >= row_pos:
             cursor.Row += 1
             self.SetGridCursor(cursor)
-
-        self.InsertRows(row_pos, 1)
 
         # Need to copy the attributes object, or otherwise it will get deleted
         # in C++ when the placeholder is deleted. Please note: Even though
@@ -336,6 +342,12 @@ class TaskList(wx.grid.Grid):
 
 
     def GetDropRow(self, x, y):
+        # 
+        # Returns the index of the row where the dragged items should be
+        # inserted upon dropping them.  The index is calculated for the table
+        # that does not have the drop placeholder, i.e. it does *not* need any
+        # further correction related to placeholder removal.
+        # 
 
         pt = self.CalcGridWindowUnscrolledPosition(wx.Point(x, y), None)
 
@@ -346,9 +358,23 @@ class TaskList(wx.grid.Grid):
             # the first row or below the last one
             index = 0
 
-        # TODO: we can use CellToRect to find the closest ins pos
+        if index == self.drop_placeholder_pos:
+            # Mouse is pointing at the placeholder - that's where the items
+            # are going to be inserted
+            return index
 
-        return index
+        # Outside of the placeholder - see if we'll need correction
+        corr = 0 if self.drop_placeholder_pos is None or index <= self.drop_placeholder_pos \
+            else -1
+
+        # Now let's see whether we want to insert a new row before or after the
+        # one the user is pointing at.  We're going to compare the y coord with
+        # that of the center of the row.
+        cell_rect = self.CellToRect(index, 0)
+        if y >= (cell_rect.Top + cell_rect.Bottom) / 2:
+            corr += 1
+
+        return index + corr
 
 class TaskListDropTarget(wx.DropTarget):
     """
@@ -386,7 +412,6 @@ class TaskListDropTarget(wx.DropTarget):
             # Convert it back to a list and give it to the viewer.
             pickled_data = self.data.GetData()
             drag_data = pickle.loads(pickled_data)
-            self.target_list.DeleteDropPlaceholder()
             self.target_list.InsertDroppedItems(x, y, drag_data.get("items", []))
 
         # What is returned signals the source what to do

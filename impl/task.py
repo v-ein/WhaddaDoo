@@ -119,11 +119,6 @@ class Task:
     def yaml_representer(dumper, data):
         # Note: the order of keywords *does matter*. They will be written
         # to YAML in this order.
-        # TODO: add deadline and status. Date values will need to be limited
-        # to one-second precision (by default they're at the microsecond level).
-        # TODO: instead of adding 'None' values, ignore the keywords. Or make
-        # yaml.dump ignore them. Otherwise there are lines like 'labels: null'
-        # in the output file.
         filtered = {
             "status": data.status,
             "created": data.creation_date,
