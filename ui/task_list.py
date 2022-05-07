@@ -201,6 +201,7 @@ class TaskList(wx.grid.Grid):
             ins_pos = self.drop_ins_pos if (self.drop_ins_pos is not None) else self.GetNumberRows()
             self.DeleteDraggedItems(sel_row_blocks, ins_pos, len(items))
 
+        self.drag_start_row = None
 
     def DeleteDraggedItems(self, row_blocks, ins_pos=0, ins_len=0):
         """
@@ -234,41 +235,23 @@ class TaskList(wx.grid.Grid):
             self.GoToCell(cursor_row, self.GridCursorCol)
 
 
-    def InsertDroppedItems(self, x, y, items):
+    def InsertDroppedItemsAtPoint(self, x, y, items):
         """
         Inserts the Task objects with the IDs listed in `items` at the (x, y)
         position in the grid. The tasks are retrieved from the task pool.
         Used with drag'n'drop.
         """
         # Find the insertion point
-        # index = self.YToRow(y, clipToMinMax=True)
-        index = self.GetDropRow(x, y)
+        self.InsertDroppedItems(self.GetDropRow(x, y))
 
-        if index == wx.NOT_FOUND: # Not clicked on an item.
-            # TODO: what here?? we need to decide whether it was dropped above
-            # the first row or below the last one
+    def InsertDroppedItems(self, index, items):
+        """
+        Inserts the Task objects with the IDs listed in `items` at the `index`
+        row in the grid. The tasks are retrieved from the task pool.
+        Used with drag'n'drop.
+        """
+        if index == wx.NOT_FOUND:
             index = 0
-            # wx.grid.GridCellCoords(0, 0)
-
-            # if flags & (wx.LIST_HITTEST_NOWHERE|wx.LIST_HITTEST_ABOVE|wx.LIST_HITTEST_BELOW): # Empty list or below last item.
-            #     index = self.GetItemCount() # Append to end of list.
-            # elif self.GetItemCount() > 0:
-            #     if y <= self.GetItemRect(0).y: # Clicked just above first item.
-            #         index = 0 # Append to top of list.
-            #     else:
-            #         index = self.GetItemCount() + 1 # Append to end of list.
-
-        # else: # Clicked on an item.
-        # TODO: no correction for now, but we'll need it later
-        #     # Get bounding rectangle for the item the user is dropping over.
-        #     rect = self.GetItemRect(index)
-
-        #     # If the user is dropping into the lower half of the rect,
-        #     # we want to insert _after_ this item.
-        #     # Correct for the fact that there may be a heading involved.
-        #     if y > rect.y - self.GetItemRect(0).y + rect.height/2:
-        #         index += 1
-
 
         # Remember that we got a drop at this position. This might be
         # important if we're dragging items from the same list.
@@ -287,11 +270,7 @@ class TaskList(wx.grid.Grid):
                 self.SetGridCursor(index, 1)
 
 
-    def MoveDropPlaceholder(self, x, y):
-
-        # First see what row the y coord is pointing at
-        index = self.GetDropRow(x, y)
-
+    def MoveDropPlaceholder(self, index):
         # If it's pointing at the current placeholder position, nothing to do here
         if index == self.drop_placeholder_pos:
             return
@@ -301,7 +280,9 @@ class TaskList(wx.grid.Grid):
             # We're not inserting a placeholder if no actual move is going to happen
             # at the drop position - that is, when the supposed insertion point is
             # pointing at the row being dragged, or at the next row.
-            if index < self.drag_start_row or index > self.drag_start_row + 1:
+            if self.drag_start_row is None or \
+                index < self.drag_start_row or index > self.drag_start_row + 1:
+                
                 self.InsertDropPlaceholder(index)
 
     def InsertDropPlaceholder(self, row_pos):
@@ -376,26 +357,39 @@ class TaskList(wx.grid.Grid):
 
         return index + corr
 
+
 class TaskListDropTarget(wx.DropTarget):
     """
     Drop target for the task list.
     """
 
     last_drag_point_y = None
+    fixed_index = None
 
-    def __init__(self, target_list_):
+    def __init__(self, target_list, fixed_index=None):
         """
         Arguments:
-        target_list_: the target TaskList widget.
+        target_list: the target TaskList widget.
+        fixed_index: if set to None, the items being dragged will be dropped
+            at the mouse cursor position. If set to an int, the items will
+            always be dropped at the specified row index, no matter what mouse
+            position is. This can be used to create a widget that simply accepts
+            the fact of dropping, and always inserts the item e.g. first in 
+            the list.
         """
         super().__init__()
 
-        self.target_list = target_list_
+        self.target_list = target_list
+        self.fixed_index = fixed_index
 
         # Specify the type of data we will accept.
         self.data = wx.CustomDataObject("TaskListItems")
         self.SetDataObject(self.data)
 
+
+    def GetDropPos(self, x, y):
+        return self.fixed_index if self.fixed_index is not None \
+            else self.target_list.GetDropRow(x, y)
 
     # Called when OnDrop returns True.
     # We need to get the data and do something with it.
@@ -412,7 +406,7 @@ class TaskListDropTarget(wx.DropTarget):
             # Convert it back to a list and give it to the viewer.
             pickled_data = self.data.GetData()
             drag_data = pickle.loads(pickled_data)
-            self.target_list.InsertDroppedItems(x, y, drag_data.get("items", []))
+            self.target_list.InsertDroppedItems(self.GetDropPos(x, y), drag_data.get("items", []))
 
         # What is returned signals the source what to do
         # with the original data (move, copy, etc.)  In this
@@ -428,13 +422,13 @@ class TaskListDropTarget(wx.DropTarget):
         if y != self.last_drag_point_y:
             self.last_drag_point_y = y
             # TODO: we need to remove the placeholder when the drag is cancelled, too
-            self.target_list.MoveDropPlaceholder(x, y)
+            self.target_list.MoveDropPlaceholder(self.GetDropPos(x, y))
 
         return defResult
 
     def OnEnter(self, x, y, defResult):
         self.last_drag_point_y = y
-        self.target_list.MoveDropPlaceholder(x, y)
+        self.target_list.MoveDropPlaceholder(self.GetDropPos(x, y))
         return defResult
 
     def OnLeave(self):

@@ -11,6 +11,7 @@ from impl.task import Task, TaskComment, TaskStatus
 from ui.app_gui import AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
+from ui.task_list import TaskListDropTarget
 
 # TODO: move to impl
 class NoAliasDumper(yaml.Dumper):
@@ -72,6 +73,10 @@ class AppWindow(AppWindowBase):
         self.grid_done.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         self.grid_done.SetDefaultCellFont(self.font)
         self.grid_done.EnableEditing(False)
+        # We don't want to let user position tasks in the 'done' list during 
+        # drag'n'drop. The task being dragged needs to be inserted at the top
+        # of the list.
+        self.grid_done.SetDropTarget(TaskListDropTarget(self.grid_done, 0))
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
 
@@ -106,6 +111,10 @@ class AppWindow(AppWindowBase):
 
         self.label_done.SetBuddy(self.grid_done)
         self.label_active.SetBuddy(self.grid_tasks)
+
+        # These drop targets include the collapser 'buttons' and static lines
+        self.panel_done_tasks.SetDropTarget(TaskListDropTarget(self.grid_done, 0))
+        self.panel_active_tasks.SetDropTarget(TaskListDropTarget(self.grid_tasks, 0))
 
         # For some reason wxGlade does not generate grid.Hide() for a custom
         # grid when the 'hidden' attribute is turned on. Let's collapse this

@@ -48,30 +48,34 @@ class AppWindowBase(wx.Frame):
 
         self.sizer_left_pane = wx.BoxSizer(wx.VERTICAL)
 
-        sizer_7 = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_left_pane.Add(sizer_7, 0, wx.EXPAND, 0)
+        self.panel_done_tasks = wx.Panel(self.window_1_pane_1, wx.ID_ANY)
+        self.sizer_left_pane.Add(self.panel_done_tasks, 0, wx.EXPAND, 0)
 
-        self.label_done = ui.controls.CollapseButton(self.window_1_pane_1, wx.ID_ANY, "Done")
+        sizer_7 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.label_done = ui.controls.CollapseButton(self.panel_done_tasks, wx.ID_ANY, "Done")
         self.label_done.SetFont(wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Segoe UI"))
         sizer_7.Add(self.label_done, 0, wx.BOTTOM, 4)
 
-        static_line_1 = wx.StaticLine(self.window_1_pane_1, wx.ID_ANY)
+        static_line_1 = wx.StaticLine(self.panel_done_tasks, wx.ID_ANY)
         sizer_7.Add(static_line_1, 1, wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM | wx.LEFT | wx.RIGHT, 4)
 
         self.grid_done = TaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
         self.sizer_left_pane.Add(self.grid_done, 1, wx.BOTTOM | wx.EXPAND | wx.RIGHT, 4)
 
-        sizer_8 = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_left_pane.Add(sizer_8, 0, wx.EXPAND, 8)
+        self.panel_active_tasks = wx.Panel(self.window_1_pane_1, wx.ID_ANY)
+        self.sizer_left_pane.Add(self.panel_active_tasks, 0, wx.EXPAND, 0)
 
-        self.label_active = ui.controls.CollapseButton(self.window_1_pane_1, wx.ID_ANY, "Active")
+        sizer_8 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.label_active = ui.controls.CollapseButton(self.panel_active_tasks, wx.ID_ANY, "Active")
         self.label_active.SetFont(wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Segoe UI"))
         sizer_8.Add(self.label_active, 0, wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM | wx.TOP, 4)
 
-        static_line_2 = wx.StaticLine(self.window_1_pane_1, wx.ID_ANY)
+        static_line_2 = wx.StaticLine(self.panel_active_tasks, wx.ID_ANY)
         sizer_8.Add(static_line_2, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
 
-        self.btn_new_task = wx.Button(self.window_1_pane_1, wx.ID_ANY, "&New task")
+        self.btn_new_task = wx.Button(self.panel_active_tasks, wx.ID_ANY, "&New task")
         sizer_8.Add(self.btn_new_task, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
 
         self.grid_tasks = TaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
@@ -231,6 +235,10 @@ class AppWindowBase(wx.Frame):
         self.panel_2.SetSizer(self.sizer_right_pane)
 
         self.window_1_pane_2.SetSizer(sizer_4)
+
+        self.panel_active_tasks.SetSizer(sizer_8)
+
+        self.panel_done_tasks.SetSizer(sizer_7)
 
         self.window_1_pane_1.SetSizer(self.sizer_left_pane)
 
