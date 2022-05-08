@@ -161,7 +161,7 @@ class AppWindow(AppWindowBase):
             (event.KeyCode == wx.WXK_UP or event.KeyCode == wx.WXK_DOWN):
 
             # Moving the selected items up or down
-            self.grid_tasks.MoveSelectedItems(-1 if event.KeyCode == wx.WXK_UP else 2)
+            self.grid_tasks.MoveSelectedItems(-1 if event.KeyCode == wx.WXK_UP else 1)
         else:
             event.Skip()
 

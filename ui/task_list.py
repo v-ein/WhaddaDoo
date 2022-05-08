@@ -383,13 +383,16 @@ class TaskList(wx.grid.Grid):
             orig_pos = sel_row_blocks[0].TopRow
             new_pos = orig_pos + offset
             # Can't insert outside of the list - restricting new_pos
-            new_pos = max(min(new_pos, self.NumberRows - len(ids) + 1), 0)
-            if new_pos == orig_pos or new_pos == orig_pos + 1:
+            new_pos = max(min(new_pos, self.NumberRows - len(ids)), 0)
+            if new_pos == orig_pos:
                 # Nothing to do - quick exit
                 return
 
+            # Even though DeleteDraggedItems is supposed to be called *after*
+            # insertion, it's normal to call it before as well (imagine 
+            # drag'n'drop of the entire list contents to another list).
+            self.DeleteDraggedItems(sel_row_blocks)
             self.InsertDroppedItems(new_pos, ids)
-            self.DeleteDraggedItems(sel_row_blocks, new_pos, len(ids))
 
 
 class ActiveTaskList(TaskList):
