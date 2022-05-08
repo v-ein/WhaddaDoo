@@ -236,16 +236,14 @@ class TaskList(wx.grid.Grid):
 
             self.GoToCell(cursor_row, self.GridCursorCol)
 
-    def PrepareItemsForDropping(self, items):
+    def PrepareItemsForDropping(self, ids):
         """
-        Takes a list of items from the drop target and performs all the
-        necessary preprocessing before inserting them into the table.  Returns
-        the list of items to be inserted.  The actual Task objects may differ
-        from what was passed into this function.
+        Takes a list of IDs from the drop target and compiles a list of tasks
+        to insert into the table.  Returns the resulting list of tasks.
         """
-        # The simplest implementation just takes tasks from the task pool,
-        # protecting the list from having items absent in the pool.
-        return [self.task_pool.get(id, None) for id in items]
+        # The simplest implementation just retrieves tasks from the task pool
+        # by their IDs.
+        return [self.task_pool.get(id, None) for id in ids]
 
     def InsertDroppedItemsAtPoint(self, x, y, items):
         """
@@ -254,7 +252,7 @@ class TaskList(wx.grid.Grid):
         Used with drag'n'drop.
         """
         # Find the insertion point
-        self.InsertDroppedItems(self.GetDropRow(x, y))
+        self.InsertDroppedItems(self.GetDropRow(x, y), items)
 
     def InsertDroppedItems(self, index, items):
         """
@@ -368,6 +366,30 @@ class TaskList(wx.grid.Grid):
             corr += 1
 
         return index + corr
+
+    def MoveSelectedItems(self, offset):
+        with wx.grid.GridUpdateLocker(self):
+            # We're trying to reuse drag'n'drop as much as we can
+            sel_row_blocks = self.GetSelectedRowBlocks()
+            if len(sel_row_blocks) == 0:
+                cursor = self.GetGridCursorCoords()
+                sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]
+
+            ids = []
+            table = self.GetTable()
+            for block in sel_row_blocks:
+                ids.extend([t.id for t in table.GetItems(block.GetTopRow(), block.GetBottomRow() + 1)])
+
+            orig_pos = sel_row_blocks[0].TopRow
+            new_pos = orig_pos + offset
+            # Can't insert outside of the list - restricting new_pos
+            new_pos = max(min(new_pos, self.NumberRows - len(ids) + 1), 0)
+            if new_pos == orig_pos or new_pos == orig_pos + 1:
+                # Nothing to do - quick exit
+                return
+
+            self.InsertDroppedItems(new_pos, ids)
+            self.DeleteDraggedItems(sel_row_blocks, new_pos, len(ids))
 
 
 class ActiveTaskList(TaskList):

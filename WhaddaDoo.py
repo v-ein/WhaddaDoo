@@ -61,6 +61,7 @@ class AppWindow(AppWindowBase):
 
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)
+        self.grid_tasks.Bind(wx.EVT_KEY_DOWN, self.OnGridKeyDown)
 
         self.grid_done.SetGridLineColour(wx.Colour(224, 224, 224))
         self.grid_done.AutoSizeColLabelSize(0)
@@ -152,7 +153,17 @@ class AppWindow(AppWindowBase):
     def OnGridChar(self, event):
         if event.KeyCode == wx.WXK_INSERT and not event.HasAnyModifiers():
             self.InsertNewTask(self.grid_tasks.GridCursorRow)
+
         event.Skip()
+
+    def OnGridKeyDown(self, event):
+        if event.GetModifiers() == wx.MOD_CONTROL and \
+            (event.KeyCode == wx.WXK_UP or event.KeyCode == wx.WXK_DOWN):
+
+            # Moving the selected items up or down
+            self.grid_tasks.MoveSelectedItems(-1 if event.KeyCode == wx.WXK_UP else 2)
+        else:
+            event.Skip()
 
     def OnGridTasksSelectCell(self, event):
         # This handler is used for both grid_tasks and grid_done
