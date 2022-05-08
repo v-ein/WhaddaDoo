@@ -162,6 +162,15 @@ class AppWindow(AppWindowBase):
 
             # Moving the selected items up or down
             self.grid_tasks.MoveSelectedItems(-1 if event.KeyCode == wx.WXK_UP else 1)
+
+        elif event.KeyCode == wx.WXK_RETURN:
+            # Preventing the grid from moving the cursor down after editing
+            if self.grid_tasks.IsCellEditControlEnabled():
+                self.grid_tasks.DisableCellEditControl()
+            else:
+                # If there's no editor, let the grid do the default stuff
+                event.Skip()
+                
         else:
             event.Skip()
 
