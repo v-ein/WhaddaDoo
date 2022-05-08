@@ -4,6 +4,8 @@
 import pickle
 import wx
 
+from impl.task import TaskStatus
+
 
 class TaskListTable(wx.grid.GridTableBase):
 
@@ -234,6 +236,16 @@ class TaskList(wx.grid.Grid):
 
             self.GoToCell(cursor_row, self.GridCursorCol)
 
+    def PrepareItemsForDropping(self, items):
+        """
+        Takes a list of items from the drop target and performs all the
+        necessary preprocessing before inserting them into the table.  Returns
+        the list of items to be inserted.  The actual Task objects may differ
+        from what was passed into this function.
+        """
+        # The simplest implementation just takes tasks from the task pool,
+        # protecting the list from having items absent in the pool.
+        return [self.task_pool.get(id, None) for id in items]
 
     def InsertDroppedItemsAtPoint(self, x, y, items):
         """
@@ -259,7 +271,7 @@ class TaskList(wx.grid.Grid):
 
         with wx.grid.GridUpdateLocker(self):
             self.DeleteDropPlaceholder()
-            self.GetTable().InsertItems(index, [self.task_pool.get(id, None) for id in items])
+            self.GetTable().InsertItems(index, self.PrepareItemsForDropping(items))
 
             for i in range(0, len(items)):
                 self.AutoSizeRow(index + i)
@@ -356,6 +368,24 @@ class TaskList(wx.grid.Grid):
             corr += 1
 
         return index + corr
+
+
+class ActiveTaskList(TaskList):
+    def PrepareItemsForDropping(self, items):
+        tasks_from_pool = super().PrepareItemsForDropping(items)
+        for task in tasks_from_pool:
+            task.set_status(TaskStatus.ACTIVE)
+        return tasks_from_pool
+
+
+class CompletedTaskList(TaskList):
+    def PrepareItemsForDropping(self, items):
+        tasks_from_pool = super().PrepareItemsForDropping(items)
+        for task in tasks_from_pool:
+            # Only close if it comes from the 'active' list
+            if task.status == TaskStatus.ACTIVE:
+                task.set_status(TaskStatus.DONE)
+        return tasks_from_pool
 
 
 class TaskListDropTarget(wx.DropTarget):

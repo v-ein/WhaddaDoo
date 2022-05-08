@@ -419,7 +419,7 @@ class AppWindow(AppWindowBase):
         if task is None:
             # Nothing to do here
             return
-        task.status = final_status
+        task.set_status(final_status)
         self.grid_tasks.DeleteRows(self.selected_task_row)
         self.grid_done.GetTable().InsertItems(0, [task])
         self.grid_done.AutoSizeRow(0)
@@ -434,7 +434,7 @@ class AppWindow(AppWindowBase):
         if task is None:
             # Nothing to do here
             return
-        task.status = TaskStatus.ACTIVE
+        task.set_status(TaskStatus.ACTIVE)
         self.grid_done.DeleteRows(self.selected_task_row)
         self.grid_tasks.GetTable().InsertItems(0, [task])
         self.grid_tasks.AutoSizeRow(0)

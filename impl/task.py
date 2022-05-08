@@ -59,6 +59,7 @@ class Task:
     labels = None
     creation_date: datetime.datetime = None
     close_date: datetime.datetime = None
+    # TODO: think if we need the 'reopened' flag
 
     def __init__(self, *arg, **kw):
         self.gen_id()
@@ -186,3 +187,14 @@ class Task:
                 task.deadline = d
         return task
     
+    def set_status(self, new_status):
+        if self.status != new_status:
+            if new_status == TaskStatus.ACTIVE:
+                # Going from inactive to active means reopen
+                self.close_date = None
+                # TODO: add a comment containing the reopen date
+            else:
+                # Going from active to something else: either done or cancel
+                self.close_date = datetime.datetime.now()
+
+            self.status = new_status
