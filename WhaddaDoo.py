@@ -98,6 +98,7 @@ class AppWindow(AppWindowBase):
         self.grid_comments.Bind(wx.EVT_SIZE, self.OnGridSize)
 
         self.edit_desc.Bind(wx.EVT_TEXT, self.OnEditDescTextChange)
+        self.edit_desc.Bind(wx.EVT_KEY_DOWN, self.OnEditDescKeyDown)
 
         # TODO: think about para spacing. Might be good to just leave it as is.
         # We'll need to use blank lines anyway, or otherwise it's going to be like
@@ -109,6 +110,7 @@ class AppWindow(AppWindowBase):
         style.SetParagraphSpacingAfter(8)
         self.edit_desc.SetDefaultStyle(wx.TextAttr(style))
         self.edit_comment.SetDefaultStyle(wx.TextAttr(style))
+        self.edit_comment.Bind(wx.EVT_KEY_DOWN, self.OnEditCommentKeyDown)
 
         self.label_done.SetBuddy(self.grid_done)
         self.label_active.SetBuddy(self.grid_tasks)
@@ -133,12 +135,15 @@ class AppWindow(AppWindowBase):
         self.SaveBoard()
         event.Skip()
 
-    def OnBtnDescDiscard(self, event):  # wxGlade: AppWindowBase.<event_handler>
+    def AskIfDiscardDescChanges(self):
         dlg = wx.MessageDialog(self, "Discard all changes you've made to the task description?", "Discard changes", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:
             self.LoadTaskDesc()
+
+    def OnBtnDescDiscard(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.AskIfDiscardDescChanges()
         event.Skip()
 
     def OnBtnDescSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
@@ -148,6 +153,35 @@ class AppWindow(AppWindowBase):
     def OnEditDescTextChange(self, event):
         if not self.ignore_edit_change:
             self.ShowDescButtons()
+        event.Skip()
+
+    def OnEditDescKeyDown(self, event):
+        if self.panel_desc_buttons.Shown:
+            if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
+                self.AskIfDiscardDescChanges()
+            elif event.KeyCode == wx.WXK_RETURN and event.GetModifiers() == wx.MOD_CONTROL:
+                self.SaveTaskChanges()
+
+        event.Skip()
+
+    # TODO: group the richtext and apply/cancel buttons into a separate widget
+    # and reduce code duplication here. Well, maybe it's not a good idea because
+    # the description and the comments show the apply/cancel buttons on different
+    # conditions.
+    def OnEditCommentKeyDown(self, event):
+        if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
+            really_cancel = (self.edit_comment.Value == "")
+            if not really_cancel:
+                dlg = wx.MessageDialog(self, "Discard the comment text typed so far?", "Discard comment", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
+                really_cancel = (dlg.ShowModal() == wx.ID_OK)
+                dlg.Destroy()
+
+            if really_cancel:
+                self.ShowCommentEditor(False)
+                self.grid_comments.SetFocus()
+        elif event.KeyCode == wx.WXK_RETURN and event.GetModifiers() == wx.MOD_CONTROL:
+            self.AddNewComment()
+
         event.Skip()
 
     def OnGridChar(self, event):
@@ -170,7 +204,7 @@ class AppWindow(AppWindowBase):
             else:
                 # If there's no editor, let the grid do the default stuff
                 event.Skip()
-                
+
         else:
             event.Skip()
 
@@ -515,7 +549,7 @@ class AppWindow(AppWindowBase):
         self.ShowCommentEditor(False)
         event.Skip()
 
-    def OnBtnCommentSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
+    def AddNewComment(self):
         comment = TaskComment(self.edit_comment.Value)
         self.grid_comments.Table.AddNewComment(comment)
         self.ShowCommentEditor(False)
@@ -524,6 +558,9 @@ class AppWindow(AppWindowBase):
         self.grid_comments.AutoSizeRow(last_row)
         self.grid_comments.GoToCell(last_row, 0)
         self.grid_comments.SetFocus()
+
+    def OnBtnCommentSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.AddNewComment()
         event.Skip()
 
 
