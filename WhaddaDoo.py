@@ -85,6 +85,16 @@ class AppWindow(AppWindowBase):
         self.grid_comments.HideColLabels()
         self.grid_comments.DisableDragColSize()
         self.grid_comments.DisableDragRowSize()
+
+        # Workaround begins: we need two columns to be able to auto-size rows,
+        # because the grid computes line height incorrectly for the column 0.
+        # It does not set the font in the DC before calculating line height,
+        # so column 0 uses the default font, and all other columns use the font
+        # from the previous column.
+        self.grid_comments.SetColMinimalAcceptableWidth(0)
+        self.grid_comments.SetColSize(0, 1)
+        # Workaround ends.
+
         self.grid_comments.SetDefaultRenderer(wx.grid.GridCellAutoWrapStringRenderer())
         self.grid_comments.SetDefaultCellFont(self.font)
         self.grid_comments.EnableEditing(False)

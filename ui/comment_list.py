@@ -41,12 +41,14 @@ class CommentTable(wx.grid.GridTableBase):
         self.comment_list = []
     
     def GetNumberCols(self):
-        return 1
+        return 2
 
     def GetNumberRows(self):
         return 2 * len(self.comment_list)
 
     def GetValue(self, row, col):
+        if col == 0:
+            return ""
         comment = self.comment_list[row // 2]
         # For safety... e.g. an empty table
         if comment is None:
