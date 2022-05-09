@@ -137,10 +137,17 @@ class Task:
         return dumper.represent_mapping('tag:yaml.org,2002:map', filtered)
 
     @staticmethod
-    def date_from_yaml(value):
+    def datetime_from_yaml(value):
         if type(value) is str:
             value = datetime.datetime.fromisoformat(value)
         return value if type(value) is datetime.datetime \
+            else None
+
+    @staticmethod
+    def date_from_yaml(value):
+        if type(value) is str:
+            value = datetime.date.fromisoformat(value)
+        return value if type(value) is datetime.date \
             else None
 
     @staticmethod
@@ -168,17 +175,17 @@ class Task:
             # TODO: make sure it's a list
             for c in obj["comments"]:
                 if "text" in c and "date" in c:
-                    d = Task.date_from_yaml(c["date"])
+                    d = Task.datetime_from_yaml(c["date"])
                     if d is not None:
                         task.comments.append(TaskComment(c["text"], d))
 
         # TODO: surely it can be simplified. And less copy-paste, please.
         if "created" in obj:
-            d = Task.date_from_yaml(obj["created"])
+            d = Task.datetime_from_yaml(obj["created"])
             if d is not None:
                 task.creation_date = d
         if "closed" in obj:
-            d = Task.date_from_yaml(obj["closed"])
+            d = Task.datetime_from_yaml(obj["closed"])
             if d is not None:
                 task.close_date = d
         if "deadline" in obj:

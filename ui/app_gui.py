@@ -261,6 +261,7 @@ class AppWindowBase(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnBtnReopen, self.btn_reopen)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescDiscard, self.btn_desc_discard)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescSave, self.btn_desc_save)
+        self.Bind(wx.adv.EVT_DATE_CHANGED, self.OnDateDeadlineChanged, self.date_deadline)
         self.Bind(wx.EVT_BUTTON, self.OnBtnCommentCancel, self.btn_comment_cancel)
         self.Bind(wx.EVT_BUTTON, self.OnBtnCommentSave, self.btn_comment_save)
         self.Bind(wx.EVT_BUTTON, self.OnBtnComment, self.btn_comment)
@@ -297,6 +298,10 @@ class AppWindowBase(wx.Frame):
 
     def OnBtnDescSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnBtnDescSave' not implemented!")
+        event.Skip()
+
+    def OnDateDeadlineChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnDateDeadlineChanged' not implemented!")
         event.Skip()
 
     def OnBtnCommentCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>

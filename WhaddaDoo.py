@@ -312,7 +312,7 @@ class AppWindow(AppWindowBase):
             self.date_deadline.Value = wx.DefaultDateTime
         else:
             d = task.deadline
-            self.date_deadline.Value = wx.DateTime.FromDMY(d.day, d.month, d.year)
+            self.date_deadline.Value = wx.DateTime.FromDMY(d.day, d.month - 1, d.year)
         self.date_deadline.Enabled = is_active
 
         # TODO: make sure this works as expected. We also need to pre-populate
@@ -324,6 +324,11 @@ class AppWindow(AppWindowBase):
         self.grid_comments.AutoSizeRows()
         # TODO: fill in the remaining controls
 
+    def OnDateDeadlineChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        if self.selected_task is not None:
+            dt = event.GetEventObject().Value
+            self.selected_task.deadline = datetime.date(dt.year, dt.month + 1, dt.day)
+        event.Skip()
 
     def ResizeGridColumns(self, grid):
         #
