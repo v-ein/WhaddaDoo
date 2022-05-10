@@ -1,6 +1,7 @@
 # Copyright © 2022 Vladimir Ein. All rights reserved.
 # License: http://opensource.org/licenses/MIT
 # 
+import datetime
 import pickle
 import wx
 
@@ -30,9 +31,12 @@ class TaskListTable(wx.grid.GridTableBase):
         return len(self.task_list)
 
     def GetValue(self, row, col):
-        if col == 0:
-            return ""
         task = self.task_list[row]
+        # We're using a custom renderer for column 0, and it needs the entire
+        # task object.
+        if col == 0:
+            return None if task == None else task
+
         return "" if task == None else task.summary
 
     def SetValue(self, row, col, value):
@@ -53,7 +57,7 @@ class TaskListTable(wx.grid.GridTableBase):
 
     # TODO: do we need this? - probably yes, for auto-size
     def GetColLabelValue(self, col):
-        return "Status" if col == 0 else ""
+        return "99 wk left xxx" if col == 0 else ""
 
     # TODO: finally decide on the naming style. Looks like we should be using wx naming
     # here, otherwise it really looks like crap.
@@ -102,6 +106,121 @@ class TaskListTable(wx.grid.GridTableBase):
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, 0, len(self.task_list))
         self.task_list = list(items)
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, 0, len(self.task_list))
+
+# TODO: we probably need an attr provider that will return different attrs for
+# different columns.
+
+class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
+    # TODO: maybe not segoe?
+    status_font = None
+
+    def __init__(self, *arg, **kw):
+        super().__init__(*arg, **kw)
+        self.status_font = wx.Font(wx.Size(0, 12), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
+
+    @staticmethod
+    def FormatDays(td: datetime.timedelta):
+        units = [(365, "y"), (30, "mo"), (7, "wk")]
+        for length, name in units:
+            # if td.days / length >= 1:
+            #     return f"{td.days/length:.2g} {name}"
+            if td.days / length >= 2:
+                return f"{td.days // length} {name}"
+
+        return f"{td.days} d"
+
+    def DrawLabel(self, dc, text, rect, color, backColor, inverse=False):
+        """
+        Draws a text label in a rounded rectangle, starting at the left boundary
+        of the `rect` rectangle.  Returns the actual rectangle occupied by the
+        label, including extra margins around the label (added for readability).
+        """
+        text_fore = backColor if inverse else color
+        text_back = color if inverse else backColor
+
+        # Note: in the inverted mode, the outer boundary should be of the same
+        # color as the background, which is actually passed in the `color` parm.
+        dc.SetPen(wx.Pen(color))
+        dc.SetBrush(wx.Brush(text_back))
+        dc.SetTextBackground(text_back)
+        dc.SetTextForeground(text_fore)
+
+        label_rect = wx.Rect((10, 0), dc.GetTextExtent(text))
+        label_rect.Inflate(5, 2)
+        label_rect = label_rect.CenterIn(rect, wx.VERTICAL)
+        dc.DrawRoundedRectangle(label_rect, 4)
+        dc.DrawText(text, label_rect.topLeft + (5, 2))
+
+        label_rect.Inflate(5, 2)
+        return label_rect
+    
+    def Draw(self, grid, attr, dc, rect, row, col, isSelected):
+        # task = grid.GetCellValue(row, col)
+        # This looks like a dirty trick.  We should be using something like
+        # grid.GetCellValue, but returning non-string data.  Is there such
+        # a function in wxGrid?
+        task = grid.Table.GetValue(row, col)
+        if task is None:
+            return
+        # self.SetTextColoursAndFont(grid, attr, dc, isSelected)
+        # TODO: handle selection
+        dc.SetBackgroundMode(wx.BRUSHSTYLE_TRANSPARENT)
+        dc.SetTextBackground(attr.GetBackgroundColour())
+        dc.SetTextForeground(attr.GetTextColour())
+
+        cell_rect = wx.Rect(rect.topLeft, rect.bottomRight)
+        cell_rect.Deflate(1)
+
+        dc.SetBrush(wx.Brush(attr.GetBackgroundColour()))
+        dc.SetPen(wx.TRANSPARENT_PEN)
+        dc.DrawRectangle(rect)
+        # wx.grid.GridCellRenderer.Draw(self, grid, attr, dc, cell_rect, row, col, isSelected)
+        # super().Draw(grid, attr, dc, cell_rect, row, col, isSelected)
+        # dc.SetFont(attr.GetFont())
+        # line_height = dc.GetCharHeight()
+        dc.SetFont(self.status_font)
+
+        # Deciding how we want to draw the deadline
+        if task.deadline is not None:
+            back_col = attr.GetBackgroundColour()
+            fore_col = wx.Colour(192, 0, 0)
+            inverted = False
+
+            time_left = task.deadline - datetime.datetime.now().date()
+            if time_left < datetime.timedelta(0):
+                label = self.FormatDays(-time_left) + " over"
+                # TODO: render a red rounded rectangle and use white text col
+                # and use the word 'overdue' or 'late' or 'past due'
+                # dc.SetPen(wx.Pen(wx.Colour(192, 0, 0)))
+                # dc.SetBrush(wx.Brush(wx.Colour(192, 0, 0)))
+                # dc.SetTextForeground(wx.Colour(255, 255, 255))
+                # dc.SetTextBackground(wx.Colour(192, 0, 0))
+                inverted = True
+            else:
+                label = self.FormatDays(time_left) + " left"
+                if time_left < datetime.timedelta(days=3):
+                    # TODO: use bright red color. Borrow from a decent palette. Make it configurable?
+                    # dc.SetPen(wx.Pen(wx.Colour(255, 0, 0)))
+                    # dc.SetTextForeground(wx.Colour(255, 0, 0))
+                    fore_col = wx.Colour(255, 0, 0)
+                else:
+                    # TODO: use dark red color. Borrow from a decent palette. Make it configurable?
+                    # dc.SetPen(wx.Pen(wx.Colour(192, 0, 0)))
+                    # dc.SetTextForeground(wx.Colour(192, 0, 0))
+                    pass
+
+            self.DrawLabel(dc, label, rect, fore_col, back_col, inverted)
+            # label_rect = wx.Rect((10, 0), dc.GetTextExtent(label))
+            # label_rect.Inflate(5, 2)
+            # # label_rect = wx.Rect(rect.topLeft, rect.bottomRight)
+            # # label_rect.Height = line_height
+            # label_rect = label_rect.CenterIn(rect, wx.VERTICAL)
+            # dc.DrawRoundedRectangle(label_rect, 4)
+            # # label_rect.Deflate(5, 3)
+            # # TODO: will it clip the text if we pass a smaller rect?
+            # grid.DrawTextRectangle(dc, label, label_rect, wx.ALIGN_CENTER, wx.ALIGN_CENTER)
+            # # dc.DrawText(label_rect.topLeft, )
+
 
 
 class TaskList(wx.grid.Grid):

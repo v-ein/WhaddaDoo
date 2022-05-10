@@ -11,7 +11,7 @@ from impl.task import Task, TaskComment, TaskStatus
 from ui.app_gui import AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
-from ui.task_list import TaskListDropTarget
+from ui.task_list import TaskListDropTarget, TaskStatusRenderer
 
 # TODO: move to impl
 class NoAliasDumper(yaml.Dumper):
@@ -54,10 +54,17 @@ class AppWindow(AppWindowBase):
         # single-line cell, but that's what we probably have to put up with for now.
         self.grid_tasks.SetDefaultEditor(wx.grid.GridCellAutoWrapStringEditor())
         self.grid_tasks.SetDefaultCellFont(self.font)
+        self.grid_tasks.SetLabelFont(self.font)
 
         read_only_cell_attr = wx.grid.GridCellAttr()
         read_only_cell_attr.SetReadOnly()
-        self.grid_tasks.SetColAttr(0, read_only_cell_attr.Clone())
+        status_attr = wx.grid.GridCellAttr()
+        status_attr.SetReadOnly()
+        status_attr.SetRenderer(TaskStatusRenderer())
+        # Note: we cannot use a different font in the first column because this
+        # will break row auto-sizing in the 2nd column.  It's a bug in wxWidgets.
+        # status_attr.SetFont(wx.Font(wx.Size(0, 10), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI"))
+        self.grid_tasks.SetColAttr(0, status_attr.Clone())
 
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)

@@ -1,8 +1,11 @@
 zzzzzzz:
   status: active
+  created: 2022-05-02 00:50:08
   desc: First task.
 zzzzzzy:
   status: active
+  created: 2022-05-02 00:50:08
+  deadline: 2022-05-25
   desc: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
     incididunt ut labore et dolore magna aliqua.
   comments:
@@ -28,25 +31,82 @@ zzzzzzy:
     text: Test comment 9
 '0':
   status: active
+  created: 2022-05-02 00:50:08
+  deadline: 2022-05-03
   desc: test - line 0
 '1':
   status: active
+  created: 2022-05-02 00:50:08
+  deadline: 2022-05-12
   desc: test - line 1
+  comments:
+  - date: 2022-05-09 00:52:37
+    text: First comment here!
 '2':
   status: cancelled
+  created: 2022-05-02 00:50:08
   desc: test - line 2
 '3':
   status: active
+  created: 2022-05-02 00:50:08
+  deadline: 2022-05-14
   desc: test - line 3
 '4':
   status: done
+  created: 2022-05-02 00:50:08
   desc: test - line 4
 '5':
   status: active
+  created: 2022-05-02 00:50:08
   desc: test - line 5
 '6':
-  status: active
+  status: done
+  created: 2022-05-02 00:50:08
+  closed: 2022-05-08 22:52:15
   desc: test - line 6
 '7':
   status: active
+  created: 2022-05-02 00:50:08
   desc: test - line 7
+h5g6a2:
+  status: active
+  created: 2022-05-02 00:50:08
+  desc: A new task.
+  comments:
+  - date: 2022-05-02 00:18:36
+    text: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua.
+  - date: 2022-05-02 00:31:04
+    text: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua.
+h5gzt1:
+  status: active
+  created: 2022-05-02 00:50:08
+  desc: Another new task.
+h5rvb6:
+  status: active
+  created: 2022-05-02 00:50:08
+  desc: Some text here
+  comments:
+  - date: 2022-05-01 23:55:52
+    text: Why the hell doesn't clipboard work on Ctrl+Ins?
+  - date: 2022-05-01 23:57:23
+    text: Long long long long long long long long long long long comment.
+  - date: 2022-05-01 23:57:33
+    text: ' long long long long long long long long long long long long long long
+      long long long long long long long long comment'
+  - date: 2022-05-02 00:28:34
+    text: One more comment.
+halvbu:
+  status: active
+  created: 2022-05-02 00:50:15
+  desc: A task with a date.
+hfv0y6:
+  status: active
+  created: 2022-05-03 01:21:07
+  desc: Another task with a date.
+if5go5:
+  status: active
+  created: 2022-05-09 22:00:02
+  deadline: 2022-05-20
+  desc: Deadline.
