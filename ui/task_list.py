@@ -111,12 +111,88 @@ class TaskListTable(wx.grid.GridTableBase):
 # different columns.
 
 class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
-    # TODO: maybe not segoe?
     status_font = None
+
+    # Taken from wxWidgets - it's a margin within grid cells when the text is
+    # not centered
+    GRID_TEXT_MARGIN = 1
 
     def __init__(self, *arg, **kw):
         super().__init__(*arg, **kw)
+        # TODO: maybe not segoe?
         self.status_font = wx.Font(wx.Size(0, 12), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
+
+
+    class LabelListRenderer:
+        dc: wx.DC = None
+        line_height = 0
+        cell_rect: wx.Rect = None
+        next_label_pos: wx.Point = None
+        overflow = False
+
+        HORZ_PADDING = 5
+        VERT_PADDING = 2
+        HORZ_MARGIN = 5
+        VERT_MARGIN = 2
+        CORNER_RADIUS = 4
+
+        def __init__(self, dc: wx.DC, cell_rect: wx.Rect, first_line_height):
+            self.dc = dc
+            self.cell_rect = cell_rect
+            self.line_height = first_line_height
+            self.next_label_pos = cell_rect.TopLeft
+
+        def DrawLabel(self, dc, text, color, backColor, inverse=False):
+            """
+            Draws a text label in a rounded rectangle, starting at the left boundary
+            of the `rect` rectangle.  Returns the actual rectangle occupied by the
+            label, including extra margins around the label (added for readability).
+            """
+            # Let's see if it fits
+            outer_rect = wx.Rect(dc.GetTextExtent(text))
+            outer_rect.Width += 2 * (self.HORZ_PADDING + self.HORZ_MARGIN)
+            outer_rect.Height += 2 * (self.VERT_PADDING + self.VERT_MARGIN)
+            fits_right = (self.next_label_pos.x + outer_rect.Width <= self.cell_rect.Right)
+            fits_down = (self.next_label_pos.y + self.line_height + outer_rect.Height <= self.cell_rect.Bottom)
+
+            # If we don't have space on the current line, *and* have space
+            # below the current line, go to the next line, otherwise keep it
+            # on the current line.
+            if fits_down and not fits_right:
+                outer_rect.Offset(0, self.next_label_pos.y + self.line_height)
+            else:
+                line_rect = wx.Rect(self.next_label_pos, wx.Size(0, self.line_height))
+                outer_rect.Offset(self.next_label_pos)
+                outer_rect.CenterIn(line_rect, wx.VERTICAL)
+                self.overflow = self.overflow or not fits_right
+
+            label_rect = wx.Rect(outer_rect.TopLeft, outer_rect.BottomRight)
+            label_rect.Deflate(self.HORZ_MARGIN, self.VERT_MARGIN)
+
+            # Setup the colors
+            text_fore = backColor if inverse else color
+            text_back = color if inverse else backColor
+
+            # Note: in the inverted mode, the outer boundary should be of the same
+            # color as the background, which is actually passed in the `color` parm.
+            dc.SetPen(wx.Pen(color))
+            dc.SetBrush(wx.Brush(text_back))
+            dc.SetTextBackground(text_back)
+            dc.SetTextForeground(text_fore)
+
+            dc.DrawRoundedRectangle(label_rect, self.CORNER_RADIUS)
+            dc.DrawText(text, label_rect.topLeft + (self.HORZ_PADDING, self.VERT_PADDING))
+
+            # Note: we don't want to double the margin between the labels; however,
+            # we still need to account for the right margin when fitting the label
+            # onto the current line.  That's why we do use the right margin in
+            # the above code, but we remove it before storing the position of
+            # the next label.
+            self.next_label_pos = outer_rect.TopRight - (self.HORZ_MARGIN, 0)
+            # TODO: better use the max among all the labels on the current line
+            self.line_height = outer_rect.Height
+
+            return outer_rect
 
     @staticmethod
     def FormatDays(td: datetime.timedelta):
@@ -129,31 +205,6 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
 
         return f"{td.days} d"
 
-    def DrawLabel(self, dc, text, rect, color, backColor, inverse=False):
-        """
-        Draws a text label in a rounded rectangle, starting at the left boundary
-        of the `rect` rectangle.  Returns the actual rectangle occupied by the
-        label, including extra margins around the label (added for readability).
-        """
-        text_fore = backColor if inverse else color
-        text_back = color if inverse else backColor
-
-        # Note: in the inverted mode, the outer boundary should be of the same
-        # color as the background, which is actually passed in the `color` parm.
-        dc.SetPen(wx.Pen(color))
-        dc.SetBrush(wx.Brush(text_back))
-        dc.SetTextBackground(text_back)
-        dc.SetTextForeground(text_fore)
-
-        label_rect = wx.Rect((10, 0), dc.GetTextExtent(text))
-        label_rect.Inflate(5, 2)
-        label_rect = label_rect.CenterIn(rect, wx.VERTICAL)
-        dc.DrawRoundedRectangle(label_rect, 4)
-        dc.DrawText(text, label_rect.topLeft + (5, 2))
-
-        label_rect.Inflate(5, 2)
-        return label_rect
-    
     def Draw(self, grid, attr, dc, rect, row, col, isSelected):
         # task = grid.GetCellValue(row, col)
         # This looks like a dirty trick.  We should be using something like
@@ -168,58 +219,54 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
         dc.SetTextBackground(attr.GetBackgroundColour())
         dc.SetTextForeground(attr.GetTextColour())
 
-        cell_rect = wx.Rect(rect.topLeft, rect.bottomRight)
-        cell_rect.Deflate(1)
-
         dc.SetBrush(wx.Brush(attr.GetBackgroundColour()))
         dc.SetPen(wx.TRANSPARENT_PEN)
         dc.DrawRectangle(rect)
-        # wx.grid.GridCellRenderer.Draw(self, grid, attr, dc, cell_rect, row, col, isSelected)
-        # super().Draw(grid, attr, dc, cell_rect, row, col, isSelected)
-        # dc.SetFont(attr.GetFont())
-        # line_height = dc.GetCharHeight()
-        dc.SetFont(self.status_font)
 
-        # Deciding how we want to draw the deadline
-        if task.deadline is not None:
-            back_col = attr.GetBackgroundColour()
-            fore_col = wx.Colour(192, 0, 0)
-            inverted = False
+        # The labels we draw in the cell might overflow, and we want to prevent that.
+        with wx.DCClipper(dc, rect):
 
-            time_left = task.deadline - datetime.datetime.now().date()
-            if time_left < datetime.timedelta(0):
-                label = self.FormatDays(-time_left) + " over"
-                # TODO: render a red rounded rectangle and use white text col
-                # and use the word 'overdue' or 'late' or 'past due'
-                # dc.SetPen(wx.Pen(wx.Colour(192, 0, 0)))
-                # dc.SetBrush(wx.Brush(wx.Colour(192, 0, 0)))
-                # dc.SetTextForeground(wx.Colour(255, 255, 255))
-                # dc.SetTextBackground(wx.Colour(192, 0, 0))
-                inverted = True
-            else:
-                label = self.FormatDays(time_left) + " left"
-                if time_left < datetime.timedelta(days=3):
-                    # TODO: use bright red color. Borrow from a decent palette. Make it configurable?
-                    # dc.SetPen(wx.Pen(wx.Colour(255, 0, 0)))
-                    # dc.SetTextForeground(wx.Colour(255, 0, 0))
-                    fore_col = wx.Colour(255, 0, 0)
+            # wx.grid.GridCellRenderer.Draw(self, grid, attr, dc, cell_rect, row, col, isSelected)
+            # super().Draw(grid, attr, dc, cell_rect, row, col, isSelected)
+            dc.SetFont(attr.GetFont())
+            line_height = dc.GetCharHeight()
+            dc.SetFont(self.status_font)
+
+            cell_rect = wx.Rect(rect.topLeft, rect.bottomRight)
+            cell_rect.Deflate(0, self.GRID_TEXT_MARGIN)
+
+            label_renderer = self.LabelListRenderer(dc, cell_rect, line_height)
+
+            # Deciding how we want to draw the deadline
+            if task.deadline is not None:
+                back_col = attr.GetBackgroundColour()
+                fore_col = wx.Colour(192, 0, 0)
+                inverted = False
+
+                time_left = task.deadline - datetime.datetime.now().date()
+                if time_left < datetime.timedelta(0):
+                    label = self.FormatDays(-time_left) + " over"
+                    # TODO: render a red rounded rectangle and use white text col
+                    # and use the word 'overdue' or 'late' or 'past due'
+                    inverted = True
                 else:
-                    # TODO: use dark red color. Borrow from a decent palette. Make it configurable?
-                    # dc.SetPen(wx.Pen(wx.Colour(192, 0, 0)))
-                    # dc.SetTextForeground(wx.Colour(192, 0, 0))
-                    pass
+                    label = self.FormatDays(time_left) + " left"
+                    if time_left < datetime.timedelta(days=3):
+                        # TODO: use bright red color. Borrow from a decent palette. Make it configurable?
+                        fore_col = wx.Colour(255, 0, 0)
+                    else:
+                        # TODO: use dark red color. Borrow from a decent palette. Make it configurable?
+                        pass
 
-            self.DrawLabel(dc, label, rect, fore_col, back_col, inverted)
-            # label_rect = wx.Rect((10, 0), dc.GetTextExtent(label))
-            # label_rect.Inflate(5, 2)
-            # # label_rect = wx.Rect(rect.topLeft, rect.bottomRight)
-            # # label_rect.Height = line_height
-            # label_rect = label_rect.CenterIn(rect, wx.VERTICAL)
-            # dc.DrawRoundedRectangle(label_rect, 4)
-            # # label_rect.Deflate(5, 3)
-            # # TODO: will it clip the text if we pass a smaller rect?
-            # grid.DrawTextRectangle(dc, label, label_rect, wx.ALIGN_CENTER, wx.ALIGN_CENTER)
-            # # dc.DrawText(label_rect.topLeft, )
+                label_renderer.DrawLabel(dc, label, fore_col, back_col, inverted)
+
+            # TODO: if there was an overflow, dim the right boundary a bit.
+            # Looks like this is difficult with wx.DC, and probably requires wx.GraphicsContext.
+            # if label_renderer.overflow:
+            #     grad_rect = wx.Rect(rect.Right - 10, rect.Top, rect.Right, rect.Bottom)
+            #     dc.GradientFillLinear(grad_rect, wx.Colour(255, 255, 255, wx.ALPHA_TRANSPARENT), wx.Colour(255, 255, 255))
+            
+            # label_renderer.DrawLabel(dc, "A test label", wx.Colour(0, 192, 0), attr.GetBackgroundColour())
 
 
 
