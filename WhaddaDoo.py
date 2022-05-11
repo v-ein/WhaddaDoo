@@ -88,6 +88,7 @@ class AppWindow(AppWindowBase):
         # of the list.
         self.grid_done.SetDropTarget(TaskListDropTarget(self.grid_done, 0))
         self.grid_done.SetSelectionMode(wx.grid.Grid.GridSelectRows)
+        self.grid_done.SetColAttr(0, status_attr)
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
 

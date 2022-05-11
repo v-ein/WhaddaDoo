@@ -237,7 +237,7 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             label_renderer = self.LabelListRenderer(dc, cell_rect, line_height)
 
             # Deciding how we want to draw the deadline
-            if task.deadline is not None:
+            if task.deadline is not None and task.status == TaskStatus.ACTIVE:
                 back_col = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
                 # TODO: maybe borrow a similar but better looking color from a
                 # decent palette.
