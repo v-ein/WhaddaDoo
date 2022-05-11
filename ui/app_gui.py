@@ -183,7 +183,7 @@ class AppWindowBase(wx.Frame):
         label_4 = wx.StaticText(self.panel_3, wx.ID_ANY, "Labels:")
         sizer_16.Add(label_4, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
 
-        self.edit_labels = wx.TextCtrl(self.panel_3, wx.ID_ANY, "")
+        self.edit_labels = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER)
         sizer_16.Add(self.edit_labels, 1, wx.ALIGN_CENTER_VERTICAL, 0)
 
         self.grid_comments = CommentList(self.panel_3, wx.ID_ANY, size=(1, 1))
@@ -263,6 +263,7 @@ class AppWindowBase(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescSave, self.btn_desc_save)
         self.Bind(wx.adv.EVT_DATE_CHANGED, self.OnDateDeadlineChanged, self.date_deadline)
         self.Bind(wx.EVT_COMBOBOX, self.OnComboEpicChanged, self.combo_epic)
+        self.Bind(wx.EVT_TEXT_ENTER, self.OnEditLabelsTextEnter, self.edit_labels)
         self.Bind(wx.EVT_BUTTON, self.OnBtnCommentCancel, self.btn_comment_cancel)
         self.Bind(wx.EVT_BUTTON, self.OnBtnCommentSave, self.btn_comment_save)
         self.Bind(wx.EVT_BUTTON, self.OnBtnComment, self.btn_comment)
@@ -307,6 +308,10 @@ class AppWindowBase(wx.Frame):
 
     def OnComboEpicChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnComboEpicChanged' not implemented!")
+        event.Skip()
+
+    def OnEditLabelsTextEnter(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnEditLabelsTextEnter' not implemented!")
         event.Skip()
 
     def OnBtnCommentCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>

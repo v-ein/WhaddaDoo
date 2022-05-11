@@ -133,6 +133,10 @@ class AppWindow(AppWindowBase):
         self.edit_comment.SetDefaultStyle(wx.TextAttr(style))
         self.edit_comment.Bind(wx.EVT_KEY_DOWN, self.OnEditCommentKeyDown)
 
+        self.date_deadline.SetNullText("")
+
+        self.edit_labels.Bind(wx.EVT_KILL_FOCUS, self.OnEditLabelsKillFocus)
+
         self.label_done.SetBuddy(self.grid_done)
         self.label_active.SetBuddy(self.grid_tasks)
 
@@ -145,14 +149,13 @@ class AppWindow(AppWindowBase):
         # grid explicitly.
         self.label_done.Expand(False)
 
-        self.date_deadline.SetNullText("")
-
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, event):
         # TODO: make sure it's also called when the app is being closed due to
         # the system shutdown
         self.SaveTaskChanges()
+        self.SaveLabels()
         self.SaveBoard()
         event.Skip()
 
@@ -240,6 +243,7 @@ class AppWindow(AppWindowBase):
         else:
             # TODO: do we need to save anything before changing the selection pointer?
             self.SaveTaskChanges()
+            self.SaveLabels()
             self.selected_task_row = event.GetRow()
             try:
                 self.selected_task = grid.GetTable().GetItem(self.selected_task_row)
@@ -355,6 +359,21 @@ class AppWindow(AppWindowBase):
             # TODO: only repaint the current task, and ideally only the status cell
             self.grid_tasks.ForceRefresh()
             
+        event.Skip()
+
+    def SaveLabels(self):
+        if self.selected_task is not None:
+            self.selected_task.labels = sorted(self.edit_labels.Value.split())
+            # TODO: only repaint the current task, and ideally only the status cell
+            self.grid_tasks.ForceRefresh()
+            self.grid_done.ForceRefresh()
+
+    def OnEditLabelsKillFocus(self, event):
+        self.SaveLabels()
+        event.Skip()
+
+    def OnEditLabelsTextEnter(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.SaveLabels()
         event.Skip()
 
     def ResizeGridColumns(self, grid):

@@ -267,6 +267,8 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             if task.epic is not None:
                 label_renderer.DrawLabel(dc, task.epic.id, wx.Colour(0, 144, 0), attr.GetBackgroundColour(), True)
 
+            for label in task.labels:
+                label_renderer.DrawLabel(dc, label, wx.Colour(232, 232, 232), wx.Colour(0, 0, 0), True)
 
 
 class TaskList(wx.grid.Grid):

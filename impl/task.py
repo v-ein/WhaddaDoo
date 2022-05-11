@@ -148,7 +148,7 @@ class Task:
             "created": data.creation_date,
             "closed": data.close_date,
             "deadline": data.deadline,
-            "labels": data.labels if len(data.labels) > 0 
+            "labels": " ".join(data.labels) if len(data.labels) > 0 
                 else None,
             "epic": data.epic.id if data.epic is not None 
                 else None,
@@ -205,6 +205,9 @@ class Task:
                     d = Task.datetime_from_yaml(c["date"])
                     if d is not None:
                         task.comments.append(TaskComment(c["text"], d))
+        if "labels" in obj:
+            # TODO: make sure it's a string
+            task.labels = sorted(obj["labels"].split())
 
         # TODO: surely it can be simplified. And less copy-paste, please.
         if "created" in obj:
