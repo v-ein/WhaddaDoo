@@ -55,6 +55,7 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.SetDefaultEditor(wx.grid.GridCellAutoWrapStringEditor())
         self.grid_tasks.SetDefaultCellFont(self.font)
         self.grid_tasks.SetLabelFont(self.font)
+        self.grid_tasks.SetSelectionMode(wx.grid.Grid.GridSelectRows)
 
         read_only_cell_attr = wx.grid.GridCellAttr()
         read_only_cell_attr.SetReadOnly()
@@ -85,6 +86,7 @@ class AppWindow(AppWindowBase):
         # drag'n'drop. The task being dragged needs to be inserted at the top
         # of the list.
         self.grid_done.SetDropTarget(TaskListDropTarget(self.grid_done, 0))
+        self.grid_done.SetSelectionMode(wx.grid.Grid.GridSelectRows)
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
 

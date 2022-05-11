@@ -213,13 +213,13 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
         task = grid.Table.GetValue(row, col)
         if task is None:
             return
-        # self.SetTextColoursAndFont(grid, attr, dc, isSelected)
-        # TODO: handle selection
-        dc.SetBackgroundMode(wx.BRUSHSTYLE_TRANSPARENT)
-        dc.SetTextBackground(attr.GetBackgroundColour())
-        dc.SetTextForeground(attr.GetTextColour())
 
-        dc.SetBrush(wx.Brush(attr.GetBackgroundColour()))
+        dc.SetBackgroundMode(wx.BRUSHSTYLE_SOLID)
+        cell_back_col = attr.GetBackgroundColour() if not isSelected \
+            else (grid.GetSelectionBackground() if grid.HasFocus() \
+            else wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNSHADOW))
+
+        dc.SetBrush(wx.Brush(cell_back_col))
         dc.SetPen(wx.TRANSPARENT_PEN)
         dc.DrawRectangle(rect)
 
@@ -239,24 +239,23 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
 
             # Deciding how we want to draw the deadline
             if task.deadline is not None:
-                back_col = attr.GetBackgroundColour()
+                back_col = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
+                # TODO: maybe borrow a similar but better looking color from a
+                # decent palette.
                 fore_col = wx.Colour(192, 0, 0)
                 inverted = False
 
                 time_left = task.deadline - datetime.datetime.now().date()
                 if time_left < datetime.timedelta(0):
                     label = self.FormatDays(-time_left) + " over"
-                    # TODO: render a red rounded rectangle and use white text col
-                    # and use the word 'overdue' or 'late' or 'past due'
                     inverted = True
                 else:
                     label = self.FormatDays(time_left) + " left"
-                    if time_left < datetime.timedelta(days=3):
-                        # TODO: use bright red color. Borrow from a decent palette. Make it configurable?
-                        fore_col = wx.Colour(255, 0, 0)
-                    else:
-                        # TODO: use dark red color. Borrow from a decent palette. Make it configurable?
-                        pass
+                    # When the deadline is close, we'll paint it red; otherwise
+                    # it will be gray.
+                    # TODO: make this limit configurable
+                    if time_left > datetime.timedelta(days=3):
+                        fore_col = wx.Colour(160, 160, 160)
 
                 label_renderer.DrawLabel(dc, label, fore_col, back_col, inverted)
 
