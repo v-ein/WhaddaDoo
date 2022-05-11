@@ -114,7 +114,8 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
     status_font = None
 
     # Taken from wxWidgets - it's a margin within grid cells when the text is
-    # not centered
+    # not centered.  Must be kept in sync with GRID_TEXT_MARGIN in 
+    # src/generic/grid.cpp.
     GRID_TEXT_MARGIN = 1
 
     def __init__(self, *arg, **kw):
@@ -175,6 +176,7 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
 
             # Note: in the inverted mode, the outer boundary should be of the same
             # color as the background, which is actually passed in the `color` parm.
+            # TODO: maybe we should be using a null pen for the inverted mode
             dc.SetPen(wx.Pen(color))
             dc.SetBrush(wx.Brush(text_back))
             dc.SetTextBackground(text_back)
@@ -206,9 +208,8 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
         return f"{td.days} d"
 
     def Draw(self, grid, attr, dc, rect, row, col, isSelected):
-        # task = grid.GetCellValue(row, col)
-        # This looks like a dirty trick.  We should be using something like
-        # grid.GetCellValue, but returning non-string data.  Is there such
+        # TODO: This looks like a dirty trick.  We should be using something like
+        # grid.GetCellValue(), but returning non-string data.  Is there such
         # a function in wxGrid?
         task = grid.Table.GetValue(row, col)
         if task is None:
@@ -225,14 +226,12 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
 
         # The labels we draw in the cell might overflow, and we want to prevent that.
         with wx.DCClipper(dc, rect):
-
-            # wx.grid.GridCellRenderer.Draw(self, grid, attr, dc, cell_rect, row, col, isSelected)
-            # super().Draw(grid, attr, dc, cell_rect, row, col, isSelected)
             dc.SetFont(attr.GetFont())
             line_height = dc.GetCharHeight()
             dc.SetFont(self.status_font)
 
             cell_rect = wx.Rect(rect.topLeft, rect.bottomRight)
+            # Using the same margins within the cell as the string renderer uses
             cell_rect.Deflate(0, self.GRID_TEXT_MARGIN)
 
             label_renderer = self.LabelListRenderer(dc, cell_rect, line_height)
@@ -265,7 +264,8 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             #     grad_rect = wx.Rect(rect.Right - 10, rect.Top, rect.Right, rect.Bottom)
             #     dc.GradientFillLinear(grad_rect, wx.Colour(255, 255, 255, wx.ALPHA_TRANSPARENT), wx.Colour(255, 255, 255))
             
-            # label_renderer.DrawLabel(dc, "A test label", wx.Colour(0, 192, 0), attr.GetBackgroundColour())
+            if task.epic is not None:
+                label_renderer.DrawLabel(dc, task.epic.id, wx.Colour(0, 144, 0), attr.GetBackgroundColour(), True)
 
 
 

@@ -7,7 +7,7 @@ import datetime
 import os
 import tempfile
 import wx
-from impl.task import Task, TaskComment, TaskStatus
+from impl.task import Epic, Task, TaskComment, TaskStatus
 from ui.app_gui import AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
@@ -23,6 +23,7 @@ class AppWindow(AppWindowBase):
     # TODO: initialize somewhere else? or otherwise instances of this class will
     # be sharing the list and dict
     tasks_pool = {}
+    epics_pool = {}
     selected_task: Task = None
     # We need this to resize and repaint the correct row in grid_tasks
     selected_task_row: int = 0
@@ -324,9 +325,12 @@ class AppWindow(AppWindowBase):
             self.date_deadline.Value = wx.DateTime.FromDMY(d.day, d.month - 1, d.year)
         self.date_deadline.Enabled = is_active
 
-        # TODO: make sure this works as expected. We also need to pre-populate
-        # combo_epic with a list of epic names.
-        self.combo_epic.Value = task.epic.name if task.epic is not None else ""
+        # TODO: can this be broken via epics.yaml so that it throws a ValueError?
+        index = 0
+        if task.epic is not None:
+            epic_list = sorted(self.epics_pool.values(), key=lambda epic: epic.name)
+            index = epic_list.index(task.epic)
+        self.combo_epic.Select(index)
         self.combo_epic.Enabled = is_active
 
         self.grid_comments.Table.SetList(task.comments)
@@ -337,6 +341,19 @@ class AppWindow(AppWindowBase):
         if self.selected_task is not None:
             dt = event.GetEventObject().Value
             self.selected_task.deadline = datetime.date(dt.year, dt.month + 1, dt.day)
+            # TODO: only repaint the current task, and ideally only the status cell
+            self.grid_tasks.ForceRefresh()
+        event.Skip()
+
+    def OnComboEpicChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        if self.selected_task is not None:
+            combo = event.GetEventObject()
+            sel_epic_id = combo.GetClientData(combo.GetSelection())
+            self.selected_task.epic = self.epics_pool[sel_epic_id] if sel_epic_id is not None \
+                else None
+            # TODO: only repaint the current task, and ideally only the status cell
+            self.grid_tasks.ForceRefresh()
+            
         event.Skip()
 
     def ResizeGridColumns(self, grid):
@@ -447,6 +464,21 @@ class AppWindow(AppWindowBase):
         active_tasks = []
 
         dir_name = self.board_id
+
+        self.epics_pool = {}
+        try:
+            with open(os.path.join(dir_name, "epics.yaml"), "r", encoding='utf8') as f:
+                obj_pool = yaml.load(f, Loader=yaml.SafeLoader)
+                # TODO: verify that obj_pool is a dict
+                for (k, v) in obj_pool.items():
+                    self.epics_pool[k] = Epic.from_plain_object(k, v)
+        except FileNotFoundError:
+            # We don't care if there are no epics
+            pass
+        # TODO: handle key lookup exceptions that Epic.from_plain_object might
+        # throw (or add another exception to from_plain_object that would better 
+        # describe the error).
+
         # TODO: handle exceptions
         completed_set = {}
         active_set = {}
@@ -457,7 +489,7 @@ class AppWindow(AppWindowBase):
             obj_pool = yaml.load(f, Loader=yaml.SafeLoader)
             # TODO: verify that obj_pool is a dict
             for (k, v) in obj_pool.items():
-                task = Task.from_plain_object(k, v)
+                task = Task.from_plain_object(k, v, self.epics_pool)
                 self.tasks_pool[k] = task
                 if task.status == TaskStatus.ACTIVE:
                     active_set[k] = task
@@ -478,6 +510,18 @@ class AppWindow(AppWindowBase):
                     pass
 
         # TODO: verify that active_set is empty
+
+        self.combo_epic.Clear()
+        # Note: we want the 'no epic' (blank) string to be at the top of the
+        # list, and therefore can't rely on the native sorting provided by 
+        # ComboBox itself.
+        self.combo_epic.Append("", None)
+        # for (id, epic) in sorted(self.epics_pool.items(), key=lambda item: item[1].name):
+        #     self.combo_epic.Append(epic.name, id)
+        for epic in sorted(self.epics_pool.values(), key=lambda epic: epic.name):
+            self.combo_epic.Append(epic.name, epic.id)
+        # Adding the 'no epic' item to the pool, too.  Can't do it earlier.
+        self.epics_pool[None] = Epic()
 
         # TODO: sort tasks by completion date, newer to older
         self.grid_done.SetTaskList(list(completed_set.values()), self.tasks_pool)

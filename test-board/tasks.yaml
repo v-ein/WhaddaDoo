@@ -6,6 +6,7 @@ zzzzzzy:
   status: active
   created: 2022-05-02 00:50:08
   deadline: 2022-05-25
+  epic: TestEpic
   desc: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
     incididunt ut labore et dolore magna aliqua.
   comments:
@@ -58,6 +59,7 @@ zzzzzzy:
 '5':
   status: active
   created: 2022-05-02 00:50:08
+  epic: TestEpic
   desc: test - line 5
 '6':
   status: done

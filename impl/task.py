@@ -17,7 +17,30 @@ class TaskStatus(Enum):
 
 
 class Epic:
+    # Unlike Task objects, this ID is shown to the user, and is supposed to be
+    # readable (to a certain extent).  It's auto-generated based off the epic
+    # name, but can be edited by the user.
+    # Note: even though we store epics in a dict by their ID and could use that
+    # dict's keys to exclusively store IDs, this makes it difficult to map Epics
+    # back to IDs.  That's why we also store the ID inside the Epic object.
+    id = ""
     name = ""
+    # TODO: add a field for user-defined color (which we'll be using for labels
+    # in the status cell)
+
+    def __init__(self, id="", name=""):
+        self.id = id
+        self.name = name
+
+    @staticmethod
+    def from_plain_object(id, obj):
+        """
+        Construct an epic based off a plain object read from YAML.
+
+        We can't use YAML constructors directly because we don't save tags into
+        YAML, and therefore PyYAML can't deduce object types on reading.
+        """
+        return Epic(id, obj["name"])
 
 
 class TaskComment:
@@ -127,7 +150,7 @@ class Task:
             "deadline": data.deadline,
             "labels": data.labels if len(data.labels) > 0 
                 else None,
-            "epic": data.epic.name if data.epic is not None 
+            "epic": data.epic.id if data.epic is not None 
                 else None,
             "desc": data.get_full_desc(),
             "comments": data.comments if len(data.comments) > 0 
@@ -151,12 +174,15 @@ class Task:
             else None
 
     @staticmethod
-    def from_plain_object(id, obj):
+    def from_plain_object(id, obj, epics):
         """
         Construct a task based off a plain object read from YAML.
 
         We can't use YAML constructors directly because we don't save tags into
         YAML, and therefore PyYAML can't deduce object types on reading.
+
+        Since Task can reference Epic objects, this method requires an epic pool
+        to be populated beforehand, and passed to it in the epics parameter.
         """
         task = Task()
         task.id = id
@@ -170,7 +196,8 @@ class Task:
             task.status = TaskStatus(obj["status"])
         if "desc" in obj:
             task.set_full_desc(obj["desc"])
-        # if "epic" in obj:
+        if "epic" in obj:
+            task.epic = epics[obj["epic"]]
         if "comments" in obj:
             # TODO: make sure it's a list
             for c in obj["comments"]:
