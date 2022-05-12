@@ -39,8 +39,6 @@ class AppWindow(AppWindowBase):
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
 
-        self.board_id = "test-board"
-
         self.font = wx.Font(wx.Size(0, 14), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
 
         self.grid_tasks.SetGridLineColour(wx.Colour(224, 224, 224))
@@ -409,10 +407,12 @@ class AppWindow(AppWindowBase):
         self.ResizeGridColumns(self.grid_tasks)
         self.ResizeGridColumns(self.grid_done)
         self.ResizeGridColumns(self.grid_comments)
-        # TODO: we should iterate over the sub-directories in the repo and
-        # for every directory with "tasks.yaml" inside, load it as a board.
-        # We *don't know* the board name beforehand.
-        self.LoadBoard()
+        for f in os.scandir("."):
+            if f.is_dir() and os.path.isfile(os.path.join(f.path, "tasks.yaml")):
+                self.LoadBoard(f.name)
+                # TODO: remove this line after adding support for multiple boards
+                break
+
         event.Skip()
 
     # TODO: think on naming conventions. Are "Save/Load" about disk I/O? If so,
@@ -479,7 +479,9 @@ class AppWindow(AppWindowBase):
             pass
         os.rename(new_name, old_name)
 
-    def LoadBoard(self):
+    def LoadBoard(self, board_id):
+        self.board_id = board_id
+
         self.tasks_pool = {}
         active_tasks = []
 
@@ -531,6 +533,7 @@ class AppWindow(AppWindowBase):
 
         # TODO: verify that active_set is empty
 
+        self.tabs_boards.SetPageText(0, board_id)
         self.combo_epic.Clear()
         # Note: we want the 'no epic' (blank) string to be at the top of the
         # list, and therefore can't rely on the native sorting provided by 
