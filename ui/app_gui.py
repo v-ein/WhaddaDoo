@@ -49,6 +49,16 @@ class AppWindowBase(wx.Frame):
 
         self.sizer_left_pane = wx.BoxSizer(wx.VERTICAL)
 
+        sizer_17 = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_left_pane.Add(sizer_17, 0, wx.BOTTOM | wx.EXPAND, 8)
+
+        self.text_ctrl_1 = wx.TextCtrl(self.window_1_pane_1, wx.ID_ANY, "")
+        sizer_17.Add(self.text_ctrl_1, 1, wx.RIGHT, 8)
+
+        self.btn_adv_search = wx.Button(self.window_1_pane_1, wx.ID_ANY, "...")
+        self.btn_adv_search.SetMinSize((30, -1))
+        sizer_17.Add(self.btn_adv_search, 0, wx.RIGHT, 4)
+
         self.panel_done_tasks = wx.Panel(self.window_1_pane_1, wx.ID_ANY)
         self.sizer_left_pane.Add(self.panel_done_tasks, 0, wx.EXPAND, 0)
 
