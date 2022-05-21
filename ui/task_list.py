@@ -3,6 +3,7 @@
 # 
 import datetime
 import pickle
+from sys import displayhook
 import wx
 
 from impl.task import TaskFilter, TaskStatus
@@ -13,7 +14,10 @@ class TaskListTable(wx.grid.GridTableBase):
     # This list may contain elements set to None - e.g. to designate a 
     # placeholder for a new task, or a temporary cell
     task_list = None
+    # A list of items actually displayed in the grid.
     display_list = None
+    # Positions of the displayed items in the original list (i.e. `task_list`).
+    display_index = None
     last_filter: TaskFilter = None
 
     # TODO: will we also need the task pool? Or should we serialize the task
@@ -24,6 +28,7 @@ class TaskListTable(wx.grid.GridTableBase):
         # TODO: maybe call Filter() ?
         self.last_filter = TaskFilter()
         self.display_list = []
+        self.display_index = []
     
     def CanMeasureColUsingSameAttr(self, col):
         # We always use the same renderer and font for all cells within a column
@@ -48,16 +53,12 @@ class TaskListTable(wx.grid.GridTableBase):
         if col == 1:
             self.display_list[row].summary = value
 
-    def FindOrigTaskPos(self, pos, start_pos = 0):
+    def FindOrigTaskPos(self, pos):
         # Converts the position of a task in display_list to the corresponding
-        # position in task_list.  Might do weird things if the same element 
-        # in task_list occurs more than once. This is quite possible with `None`
-        # elements, which are inserted by InsertRows().  However, in our current
-        # implementation of TaskList, at any moment there's at most one `None`
-        # element.
-        if pos >= len(self.display_list):
-            return len(self.task_list)
-        return self.task_list.index(self.display_list[pos], start_pos)
+        # position in task_list.
+        return len(self.task_list) if pos >= len(self.display_list) \
+            else self.display_index[pos]
+
 
     def InsertRows(self, pos=0, numRows=1):
         # Note: `pos` points to a row in display_list, but we need to update
@@ -67,19 +68,28 @@ class TaskListTable(wx.grid.GridTableBase):
         # and the list being inserted is just a list of None's.
         self.task_list[orig_pos:orig_pos] = [None] * numRows
         self.display_list[pos:pos] = [None] * numRows
+        self.display_index[pos:pos] = [ i + orig_pos for i in range(numRows) ]
+        # We need to update backreference indices in `display_index`
+        for i in range(pos + numRows, len(self.display_index)):
+            self.display_index[i] += numRows
+
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, numRows)
         return True
 
     def DeleteRows(self, pos=0, numRows=1):
-        # Delete the items in the back-storage list
-        old_pos = 0
-        for i in range(pos, pos + numRows):
-            orig_pos = self.FindOrigTaskPos(i, old_pos)
-            old_pos = orig_pos
-            del self.task_list[orig_pos]
+        # Delete the items in the back-storage list.  It is important to go
+        # backwards so that indices in `display_index` remain valid.
+        for i in range(numRows, 0, -1):
+            del self.task_list[self.display_index[pos + i - 1]]
 
         # Now delete them from the display list
         del self.display_list[pos : pos+numRows]
+        del self.display_index[pos : pos+numRows]
+
+        # We need to update backreference indices in `display_index`
+        for i in range(pos, len(self.display_index)):
+            self.display_index[i] -= numRows
+
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, pos, numRows)
         return True
 
@@ -142,10 +152,24 @@ class TaskListTable(wx.grid.GridTableBase):
         # We need to keep these if possible. Ideally, we can compare the new display
         # list against the old one, and only send notifications where items were
         # actually inserted or deleted, but it's not trivial to calculate.
+        # E.g. we could store the visibility status (as a boolean) for each task
+        # in `task_list`, then run match() with the new filter and create a new
+        # visibility list, and by comparing lists element-to-element it would
+        # be easy to tell where the items have been inserted or deleted.  The
+        # 'visibility list' can be easily recreated from display_index.
+        # *However* the visibility list does not yield positions in the filtered
+        # list - it operates on task_list.
         if filter is None:
             filter = self.last_filter
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, 0, len(self.display_list))
-        self.display_list = [ task for task in self.task_list if filter.match(task) ]
+
+        self.display_list = []
+        self.display_index = []
+        for pos, task in enumerate(self.task_list):
+            if filter.match(task):
+                self.display_list.append(task)
+                self.display_index.append(pos)
+
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, 0, len(self.display_list))
         # This really looks like a hack.  It would be better to handle this in
         # the grid itself; however, to do that, we'd need to override 
@@ -580,7 +604,7 @@ class TaskList(wx.grid.Grid):
         # one the user is pointing at.  We're going to compare the y coord with
         # that of the center of the row.
         cell_rect = self.CellToRect(index, 0)
-        if y >= (cell_rect.Top + cell_rect.Bottom) / 2:
+        if pt.y >= (cell_rect.Top + cell_rect.Bottom) / 2:
             corr += 1
 
         return index + corr
