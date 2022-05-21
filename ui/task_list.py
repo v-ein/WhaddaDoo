@@ -158,7 +158,8 @@ class TaskListTable(wx.grid.GridTableBase):
         # be easy to tell where the items have been inserted or deleted.  The
         # 'visibility list' can be easily recreated from display_index.
         # *However* the visibility list does not yield positions in the filtered
-        # list - it operates on task_list.
+        # list - it operates on task_list.  It should be possible to track
+        # display_list positions if we go through the visibility list backwards.
         if filter is None:
             filter = self.last_filter
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, 0, len(self.display_list))

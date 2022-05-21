@@ -655,6 +655,7 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def FilterTasks(self, query):
+        self.grid_done.Filter(TaskFilter(query))
         self.grid_tasks.Filter(TaskFilter(query))
 
     def OnEditSearchCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
