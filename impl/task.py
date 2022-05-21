@@ -3,6 +3,7 @@
 # 
 import datetime
 from enum import Enum
+import shlex
 import time
 
 
@@ -241,22 +242,59 @@ class TaskFilter:
     always_pass = False
     # Words are stored in lower case in order to perform case-insensitive search
     words = None
+    exact_phrases = None
+    epic = ""
+    labels = None
 
     def __init__(self, query=""):
         self.always_pass = (query == "")
-        # TODO: parse the query
+        # Query syntax:
         #   epic:<epicname> or e:epicname
         #   label:<labelname> or l:labelname
         # maybe 'created'/'closed'? what about status?
-        self.words = query.lower().split()
+        # Quoted parts should be exact matches and should not be tied to word
+        # boundaries.
+        self.words = []
+        self.exact_phrases = []
+        self.labels = []
+        for word in shlex.split(query.lower(), posix=False):
+            if word[0] == '"':
+                # All quoted parts should give an exact match (except they're
+                # still case-insensitive), but are not necessarily tied to 
+                # a word boundary.
+                # When adding to the list, we're trimming off the quotes.
+                self.exact_phrases.append(word[1:-1])
+            else:
+                handled = False
+                if ':' in word:
+                    keyword, value = word.split(':', 1)
+                    if value != "":
+                        if keyword == "e" or keyword == "epic":
+                            self.epic = value
+                            handled = True
+                        elif keyword == "l" or keyword == "label":
+                            self.labels.append(value)
+                            handled = True
+                # If not a known keyword, just add the word to the search list
+                if not handled:
+                    self.words.append(word)
 
-    def _matches_words(self, text):
-        text_words = text.split()
+    def _text_match(self, text):
+        lcase_text = text.lower()
+        for phrase in self.exact_phrases:
+            if phrase not in lcase_text:
+                return False
+
+        text_words = lcase_text.split()
         for word in self.words:
-            # TODO: this should be handled differently depending on the token type
             # TODO: if search becomes too slow, optimize this piece.  Str.lower()
-            # is considered inefficient in this case.
-            if all(not t.lower().startswith(word) for t in text_words):
+            # is considered inefficient in this case. We can convert the starting
+            # portion to lowercase, using len(word) as the limit (but only when
+            # exact_phrases are empty and therefore text doesn't need an early
+            # conversion to lowercase).
+            # Hmm.. actually, we need to convert to lowercase right after split(),
+            # and use max of word lengths as the limit.
+            if all(not t.startswith(word) for t in text_words):
                 return False
 
         return True
@@ -264,6 +302,13 @@ class TaskFilter:
     def match(self, task):
         if self.always_pass:
             return True
+
+        if self.epic != "" and task.epic.id != self.epic:
+            return False
+
+        for label in self.labels:
+            if label not in [ task_label.lower for task_label in task.labels ]:
+                return False
         
         # TODO: search in comments, too
-        return self._matches_words(task.summary + "\n" + task.desc)
+        return self._text_match(task.summary + "\n" + task.desc)
