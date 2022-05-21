@@ -5,7 +5,7 @@ import datetime
 import pickle
 import wx
 
-from impl.task import TaskStatus
+from impl.task import TaskFilter, TaskStatus
 
 
 class TaskListTable(wx.grid.GridTableBase):
@@ -13,12 +13,17 @@ class TaskListTable(wx.grid.GridTableBase):
     # This list may contain elements set to None - e.g. to designate a 
     # placeholder for a new task, or a temporary cell
     task_list = None
+    display_list = None
+    last_filter: TaskFilter = None
 
     # TODO: will we also need the task pool? Or should we serialize the task
     # entirely on drag'n'drop?
     def __init__(self):
         super().__init__()
         self.task_list = []
+        # TODO: maybe call Filter() ?
+        self.last_filter = TaskFilter()
+        self.display_list = []
     
     def CanMeasureColUsingSameAttr(self, col):
         # We always use the same renderer and font for all cells within a column
@@ -28,10 +33,10 @@ class TaskListTable(wx.grid.GridTableBase):
         return 2
 
     def GetNumberRows(self):
-        return len(self.task_list)
+        return len(self.display_list)
 
     def GetValue(self, row, col):
-        task = self.task_list[row]
+        task = self.display_list[row]
         # We're using a custom renderer for column 0, and it needs the entire
         # task object.
         if col == 0:
@@ -41,26 +46,47 @@ class TaskListTable(wx.grid.GridTableBase):
 
     def SetValue(self, row, col, value):
         if col == 1:
-            self.task_list[row].summary = value
+            self.display_list[row].summary = value
+
+    def FindOrigTaskPos(self, pos, start_pos = 0):
+        # Converts the position of a task in display_list to the corresponding
+        # position in task_list.  Might do weird things if the same element 
+        # in task_list occurs more than once. This is quite possible with `None`
+        # elements, which are inserted by InsertRows().  However, in our current
+        # implementation of TaskList, at any moment there's at most one `None`
+        # element.
+        if pos >= len(self.display_list):
+            return len(self.task_list)
+        return self.task_list.index(self.display_list[pos], start_pos)
 
     def InsertRows(self, pos=0, numRows=1):
+        # Note: `pos` points to a row in display_list, but we need to update
+        # both display_list and task_list.
+        orig_pos = self.FindOrigTaskPos(pos)
         # Slicing inserts one list into another at the `pos` index,
         # and the list being inserted is just a list of None's.
-        self.task_list[pos:pos] = [None] * numRows
+        self.task_list[orig_pos:orig_pos] = [None] * numRows
+        self.display_list[pos:pos] = [None] * numRows
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, numRows)
         return True
 
     def DeleteRows(self, pos=0, numRows=1):
-        del self.task_list[pos : pos+numRows]
+        # Delete the items in the back-storage list
+        old_pos = 0
+        for i in range(pos, pos + numRows):
+            orig_pos = self.FindOrigTaskPos(i, old_pos)
+            old_pos = orig_pos
+            del self.task_list[orig_pos]
+
+        # Now delete them from the display list
+        del self.display_list[pos : pos+numRows]
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, pos, numRows)
         return True
 
     # TODO: do we need this? - probably yes, for auto-size
     def GetColLabelValue(self, col):
-        return "99 wk left xxx" if col == 0 else ""
+        return "99 wk left|epic id" if col == 0 else ""
 
-    # TODO: finally decide on the naming style. Looks like we should be using wx naming
-    # here, otherwise it really looks like crap.
     def NotifyGrid(self, notification, pos, numRows):
         msg = wx.grid.GridTableMessage(self, notification, pos, numRows)
         self.GetView().ProcessTableMessage(msg)
@@ -76,15 +102,18 @@ class TaskListTable(wx.grid.GridTableBase):
         return self.task_list
 
     def GetItem(self, row):
-        return self.task_list[row]
+        return self.display_list[row]
 
     def GetItems(self, start, end):
-        return self.task_list[start:end]
+        return self.display_list[start:end]
 
     def InsertItems(self, pos, items):
         """Inserts the passed Task objects into the list, updating the grid."""
-        self.task_list[pos:pos] = items
-        self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, len(items))
+        orig_pos = self.FindOrigTaskPos(pos)
+        self.task_list[orig_pos:orig_pos] = items
+        # TODO: refilter the inserted items only, and update row heights for them
+        # rather than for the entire list.
+        self.Filter()
 
     def LoadList(self, items):
         """
@@ -103,9 +132,26 @@ class TaskListTable(wx.grid.GridTableBase):
         # and use SetTable() each time we load a list of tasks. Or maybe even
         # reuse the same table object, just call SetTable(). Need to check what
         # attributes might get lost on resetting the table.
-        self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, 0, len(self.task_list))
+
         self.task_list = list(items)
-        self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, 0, len(self.task_list))
+        # resetting the filter to 'pass everything'
+        self.Filter(TaskFilter())
+
+    def Filter(self, filter: TaskFilter = None):
+        # TODO: these notifications will probably reset cursor and selection state.
+        # We need to keep these if possible. Ideally, we can compare the new display
+        # list against the old one, and only send notifications where items were
+        # actually inserted or deleted, but it's not trivial to calculate.
+        if filter is None:
+            filter = self.last_filter
+        self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, 0, len(self.display_list))
+        self.display_list = [ task for task in self.task_list if filter.match(task) ]
+        self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, 0, len(self.display_list))
+        # This really looks like a hack.  It would be better to handle this in
+        # the grid itself; however, to do that, we'd need to override 
+        # ProcessTableMessage, which would look like another hack.
+        self.GetView().AutoSizeRows()
+        self.last_filter = filter
 
 # TODO: we probably need an attr provider that will return different attrs for
 # different columns.
@@ -208,13 +254,7 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
         return f"{td.days} d"
 
     def Draw(self, grid, attr, dc, rect, row, col, isSelected):
-        # TODO: This looks like a dirty trick.  We should be using something like
-        # grid.GetCellValue(), but returning non-string data.  Is there such
-        # a function in wxGrid?
-        task = grid.Table.GetValue(row, col)
-        if task is None:
-            return
-
+        # Clear cell background
         dc.SetBackgroundMode(wx.BRUSHSTYLE_SOLID)
         cell_back_col = attr.GetBackgroundColour() if not isSelected \
             else (grid.GetSelectionBackground() if grid.HasFocus() \
@@ -223,6 +263,13 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
         dc.SetBrush(wx.Brush(cell_back_col))
         dc.SetPen(wx.TRANSPARENT_PEN)
         dc.DrawRectangle(rect)
+
+        # TODO: This looks like a dirty trick.  We should be using something like
+        # grid.GetCellValue(), but returning non-string data.  Is there such
+        # a function in wxGrid?
+        task = grid.Table.GetValue(row, col)
+        if task is None:
+            return
 
         # The labels we draw in the cell might overflow, and we want to prevent that.
         with wx.DCClipper(dc, rect):
@@ -302,6 +349,10 @@ class TaskList(wx.grid.Grid):
     def SetTaskList(self, task_list, task_pool_):
         self.task_pool = task_pool_
         self.GetTable().LoadList(task_list)
+
+    def Filter(self, filter: TaskFilter = None):
+        self.Table.Filter(filter)
+        # self.AutoSizeRows()
 
     def GetColGridLinePen1(self, col):
         # pen = wx.Pen(wx.Colour(0, 255, 255), 1, style=wx.PENSTYLE_USER_DASH)

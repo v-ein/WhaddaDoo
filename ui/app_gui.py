@@ -52,8 +52,10 @@ class AppWindowBase(wx.Frame):
         sizer_17 = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_left_pane.Add(sizer_17, 0, wx.BOTTOM | wx.EXPAND, 8)
 
-        self.text_ctrl_1 = wx.TextCtrl(self.window_1_pane_1, wx.ID_ANY, "")
-        sizer_17.Add(self.text_ctrl_1, 1, wx.RIGHT, 8)
+        self.edit_search = wx.SearchCtrl(self.window_1_pane_1, wx.ID_ANY, "")
+        self.edit_search.ShowCancelButton(True)
+        self.edit_search.SetDescriptiveText("Search")
+        sizer_17.Add(self.edit_search, 1, wx.EXPAND | wx.RIGHT, 8)
 
         self.btn_adv_search = wx.Button(self.window_1_pane_1, wx.ID_ANY, "...")
         self.btn_adv_search.SetMinSize((30, -1))
@@ -262,6 +264,9 @@ class AppWindowBase(wx.Frame):
         self.Layout()
         self.Centre()
 
+        self.Bind(wx.EVT_SEARCHCTRL_CANCEL_BTN, self.OnEditSearchCancel, self.edit_search)
+        self.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, self.OnEditSearchSeach, self.edit_search)
+        self.Bind(wx.EVT_TEXT, self.OnEditSearchChange, self.edit_search)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_done)
         self.Bind(wx.EVT_BUTTON, self.OnBtnNewTask, self.btn_new_task)
         self.Bind(wx.grid.EVT_GRID_CMD_CELL_CHANGED, self.OnGridTasksCellChanged, self.grid_tasks)
@@ -279,6 +284,18 @@ class AppWindowBase(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnBtnComment, self.btn_comment)
         self.Bind(wx.EVT_SHOW, self.OnFrameShow, self)
         # end wxGlade
+
+    def OnEditSearchCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnEditSearchCancel' not implemented!")
+        event.Skip()
+
+    def OnEditSearchSeach(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnEditSearchSeach' not implemented!")
+        event.Skip()
+
+    def OnEditSearchChange(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnEditSearchChange' not implemented!")
+        event.Skip()
 
     def OnGridTasksSelectCell(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnGridTasksSelectCell' not implemented!")

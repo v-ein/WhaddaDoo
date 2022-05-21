@@ -84,7 +84,7 @@ class Task:
     close_date: datetime.datetime = None
     # TODO: think if we need the 'reopened' flag
 
-    def __init__(self, *arg, **kw):
+    def __init__(self):
         self.gen_id()
         self.creation_date = datetime.datetime.now()
         self.comments = []
@@ -235,3 +235,35 @@ class Task:
                 self.close_date = datetime.datetime.now()
 
             self.status = new_status
+
+
+class TaskFilter:
+    always_pass = False
+    # Words are stored in lower case in order to perform case-insensitive search
+    words = None
+
+    def __init__(self, query=""):
+        self.always_pass = (query == "")
+        # TODO: parse the query
+        #   epic:<epicname> or e:epicname
+        #   label:<labelname> or l:labelname
+        # maybe 'created'/'closed'? what about status?
+        self.words = query.lower().split()
+
+    def _matches_words(self, text):
+        text_words = text.split()
+        for word in self.words:
+            # TODO: this should be handled differently depending on the token type
+            # TODO: if search becomes too slow, optimize this piece.  Str.lower()
+            # is considered inefficient in this case.
+            if all(not t.lower().startswith(word) for t in text_words):
+                return False
+
+        return True
+
+    def match(self, task):
+        if self.always_pass:
+            return True
+        
+        # TODO: search in comments, too
+        return self._matches_words(task.summary + "\n" + task.desc)

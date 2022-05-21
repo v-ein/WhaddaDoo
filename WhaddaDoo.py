@@ -7,7 +7,7 @@ import datetime
 import os
 import tempfile
 import wx
-from impl.task import Epic, Task, TaskComment, TaskStatus
+from impl.task import Epic, Task, TaskComment, TaskFilter, TaskStatus
 from ui.app_gui import AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
@@ -652,6 +652,21 @@ class AppWindow(AppWindowBase):
 
     def OnBtnCommentSave(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.AddNewComment()
+        event.Skip()
+
+    def FilterTasks(self, query):
+        self.grid_tasks.Filter(TaskFilter(query))
+
+    def OnEditSearchCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.FilterTasks("")
+        event.Skip()
+
+    def OnEditSearchSeach(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.FilterTasks(event.GetString())
+        event.Skip()
+
+    def OnEditSearchChange(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        # TODO: set up a timer (say, 1 or 2 seconds) that will call FilterTasks
         event.Skip()
 
 
