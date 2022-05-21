@@ -3,6 +3,7 @@
 # 
 import datetime
 import pickle
+from sys import displayhook
 import wx
 
 from impl.task import TaskFilter, TaskStatus
@@ -13,6 +14,9 @@ class TaskListTable(wx.grid.GridTableBase):
     # This list may contain elements set to None - e.g. to designate a 
     # placeholder for a new task, or a temporary cell
     task_list = None
+    # A list of two-element lists [pos, task] where pos is the index of the task
+    # in the original list.  Note: we're not using tuples because sometimes we
+    # need to update `pos`, and tuples are immutable.
     display_list = None
     last_filter: TaskFilter = None
 
@@ -36,7 +40,7 @@ class TaskListTable(wx.grid.GridTableBase):
         return len(self.display_list)
 
     def GetValue(self, row, col):
-        task = self.display_list[row]
+        task = self.display_list[row][1]
         # We're using a custom renderer for column 0, and it needs the entire
         # task object.
         if col == 0:
@@ -46,7 +50,7 @@ class TaskListTable(wx.grid.GridTableBase):
 
     def SetValue(self, row, col, value):
         if col == 1:
-            self.display_list[row].summary = value
+            self.display_list[row][1].summary = value
 
     def FindOrigTaskPos(self, pos, start_pos = 0):
         # Converts the position of a task in display_list to the corresponding
@@ -57,7 +61,9 @@ class TaskListTable(wx.grid.GridTableBase):
         # element.
         if pos >= len(self.display_list):
             return len(self.task_list)
-        return self.task_list.index(self.display_list[pos], start_pos)
+        return self.display_list[pos][0]
+        # return self.task_list.index(self.display_list[pos], start_pos)
+
 
     def InsertRows(self, pos=0, numRows=1):
         # Note: `pos` points to a row in display_list, but we need to update
@@ -66,7 +72,7 @@ class TaskListTable(wx.grid.GridTableBase):
         # Slicing inserts one list into another at the `pos` index,
         # and the list being inserted is just a list of None's.
         self.task_list[orig_pos:orig_pos] = [None] * numRows
-        self.display_list[pos:pos] = [None] * numRows
+        self.display_list[pos:pos] = [ [orig_pos + i, None] for i in range(numRows) ]
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, numRows)
         return True
 
@@ -80,6 +86,11 @@ class TaskListTable(wx.grid.GridTableBase):
 
         # Now delete them from the display list
         del self.display_list[pos : pos+numRows]
+
+        # We need to update backreference indices in `display_list`
+        for i in range(pos, len(self.display_list)):
+            self.display_list[i][0] -= numRows
+
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, pos, numRows)
         return True
 
