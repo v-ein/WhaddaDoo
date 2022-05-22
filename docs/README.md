@@ -6,6 +6,15 @@ WhaddaDoo is a personal to-do list tool.
 - It is entirely local and works offline.
 - Inspired by Agile practices, it aims to help with prioritization in the first place. Its main purpose is to answer the question, "What should I do now?"
 
+# Requirements
+
+WhaddaDoo requires the following software to be installed on your machine:
+
+- Python 3.8
+- wxPython 4.1.1
+
+It might work on older versions of these products, but it has not been tested with the older versions. Before reporting a bug, make sure you have the versions listed above or newer versions of these packages.
+
 # Development
 
 ## DISCLAIMER
@@ -19,6 +28,10 @@ You might have noticed that wxPython does not adhere to PEP 8 naming conventions
 Within my subclasses of wxPython classes, I use the same naming convention as in wxPython/wxWidgets - CamelCase method names and all. Otherwise such classes would quickly become a horrible mess of different styles.
 
 For 'pure' Python classes, however, I prefer to use the naming recommended in PEP 8. This might look like an unwise mix of rules in a single project; however, I do have my reasons: you can't avoid PEP 8 names because **all other** libraries, including Python itself, use them. Therefore I try to minimize the area where non-PEP 8 names live.
+
+## Python version
+
+I have reasons to stick to Python 3.8. There are places in the code that could look more elegant with a newer version of Python; however, for now I'm keeping the code compatible with 3.8. This may change in future.
 
 # License
 
