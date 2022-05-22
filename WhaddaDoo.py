@@ -36,6 +36,10 @@ class AppWindow(AppWindowBase):
     # gets fixed.
     ignore_edit_change = False
 
+    search_timer = None
+    # SEARCH_TIMER_ID = 10
+    SEARCH_DELAY = 500
+
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
 
@@ -116,6 +120,10 @@ class AppWindow(AppWindowBase):
 
         self.grid_comments.Bind(wx.EVT_SIZE, self.OnGridSize)
 
+        self.edit_search.Bind(wx.EVT_CHAR, self.OnEditSearchChar)
+        self.search_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
+
         self.edit_desc.Bind(wx.EVT_TEXT, self.OnEditDescTextChange)
         self.edit_desc.Bind(wx.EVT_KEY_DOWN, self.OnEditDescKeyDown)
 
@@ -152,6 +160,7 @@ class AppWindow(AppWindowBase):
     def OnClose(self, event):
         # TODO: make sure it's also called when the app is being closed due to
         # the system shutdown
+        self.search_timer.Stop()
         self.SaveTaskChanges()
         self.SaveLabels()
         self.SaveBoard()
@@ -655,6 +664,7 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def FilterTasks(self, query):
+        print("Filter called")
         self.grid_done.Filter(TaskFilter(query))
         self.grid_tasks.Filter(TaskFilter(query))
 
@@ -667,7 +677,23 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def OnEditSearchChange(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        # TODO: set up a timer (say, 1 or 2 seconds) that will call FilterTasks
+        self.search_timer.StartOnce(self.SEARCH_DELAY)
+        event.Skip()
+
+    def OnEditSearchChar(self, event):
+        # We need some special handling for Esc and Enter
+        if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
+            # TODO: prevent double filtering (first call here and then another
+            # call on timer set up in OnEditSearchChange)
+            event.GetEventObject().Clear()
+            self.FilterTasks("")
+        elif event.KeyCode == wx.WXK_RETURN and not event.HasAnyModifiers():
+            self.FilterTasks(event.GetEventObject().Value)
+
+        event.Skip()
+
+    def OnTimer(self, event):
+        self.FilterTasks(self.edit_search.Value)
         event.Skip()
 
 
