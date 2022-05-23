@@ -430,7 +430,17 @@ class AppWindow(AppWindowBase):
                 # TODO: remove this line after adding support for multiple boards
                 break
 
+        if self.board_id is None:
+            # If we couldn't find any boards, let's create a new one
+            self.NewBoard("Main")
+
         event.Skip()
+
+    def NewBoard(self, board_id):
+        self.board_id = board_id
+        self.tasks_pool = {}
+        self.epics_pool = {}
+        self.InitBoardWidgets([], [])
 
     # TODO: think on naming conventions. Are "Save/Load" about disk I/O? If so,
     # how should we name methods dealing with memory objects and widgets?
@@ -496,14 +506,38 @@ class AppWindow(AppWindowBase):
             pass
         os.rename(new_name, old_name)
 
+    def InitBoardWidgets(self, active_tasks, completed_tasks):
+        self.tabs_boards.SetPageText(0, self.board_id)
+        self.combo_epic.Clear()
+        # Note: we want the 'no epic' (blank) string to be at the top of the
+        # list, and therefore can't rely on the native sorting provided by 
+        # ComboBox itself.
+        self.combo_epic.Append("", None)
+        # for (id, epic) in sorted(self.epics_pool.items(), key=lambda item: item[1].name):
+        #     self.combo_epic.Append(epic.name, id)
+        for epic in sorted(self.epics_pool.values(), key=lambda epic: epic.name):
+            self.combo_epic.Append(epic.name, epic.id)
+        # Adding the 'no epic' item to the pool, too.  Can't do it earlier.
+        self.epics_pool[None] = Epic()
+
+        # TODO: sort tasks by completion date, newer to older
+        self.grid_done.SetTaskList(completed_tasks, self.tasks_pool)
+        self.grid_done.AutoSizeRows()
+        self.grid_done.SetGridCursor(0, 1)
+
+        # Note: we're loading grid_tasks after grid_done in order to get the
+        # first *active* task displayed in the right pane (i.e. we want
+        # grid_tasks.SetGridCursor() to go after grid_done.SetGridCursor(),
+        # not before it).
+        self.grid_tasks.SetTaskList(active_tasks, self.tasks_pool)
+        self.grid_tasks.AutoSizeRows()
+        self.grid_tasks.SetGridCursor(0, 1)
+    
     def LoadBoard(self, board_id):
         self.board_id = board_id
-
         self.tasks_pool = {}
         active_tasks = []
-
         dir_name = self.board_id
-
         self.epics_pool = {}
         try:
             with open(os.path.join(dir_name, "epics.yaml"), "r", encoding='utf8') as f:
@@ -549,32 +583,7 @@ class AppWindow(AppWindowBase):
                     pass
 
         # TODO: verify that active_set is empty
-
-        self.tabs_boards.SetPageText(0, board_id)
-        self.combo_epic.Clear()
-        # Note: we want the 'no epic' (blank) string to be at the top of the
-        # list, and therefore can't rely on the native sorting provided by 
-        # ComboBox itself.
-        self.combo_epic.Append("", None)
-        # for (id, epic) in sorted(self.epics_pool.items(), key=lambda item: item[1].name):
-        #     self.combo_epic.Append(epic.name, id)
-        for epic in sorted(self.epics_pool.values(), key=lambda epic: epic.name):
-            self.combo_epic.Append(epic.name, epic.id)
-        # Adding the 'no epic' item to the pool, too.  Can't do it earlier.
-        self.epics_pool[None] = Epic()
-
-        # TODO: sort tasks by completion date, newer to older
-        self.grid_done.SetTaskList(list(completed_set.values()), self.tasks_pool)
-        self.grid_done.AutoSizeRows()
-        self.grid_done.SetGridCursor(0, 1)
-
-        # Note: we're loading grid_tasks after grid_done in order to get the
-        # first *active* task displayed in the right pane (i.e. we want
-        # grid_tasks.SetGridCursor() to go after grid_done.SetGridCursor(),
-        # not before it).
-        self.grid_tasks.SetTaskList(active_tasks, self.tasks_pool)
-        self.grid_tasks.AutoSizeRows()
-        self.grid_tasks.SetGridCursor(0, 1)
+        self.InitBoardWidgets(active_tasks, list(completed_set.values()))
 
     def MarkCompleted(self, final_status=TaskStatus.DONE):
         task = self.selected_task

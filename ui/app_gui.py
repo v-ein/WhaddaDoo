@@ -121,6 +121,7 @@ class AppWindowBase(wx.Frame):
         sizer_2.Add(self.btn_done, 0, wx.LEFT, 8)
 
         self.panel_completed_workflow_buttons = wx.Panel(self.panel_2, wx.ID_ANY)
+        self.panel_completed_workflow_buttons.Hide()
         sizer_9.Add(self.panel_completed_workflow_buttons, 0, wx.EXPAND, 0)
 
         sizer_10 = wx.BoxSizer(wx.HORIZONTAL)
