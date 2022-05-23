@@ -69,6 +69,7 @@ class AppWindow(AppWindowBase):
         # will break row auto-sizing in the 2nd column.  It's a bug in wxWidgets.
         # status_attr.SetFont(wx.Font(wx.Size(0, 10), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI"))
         self.grid_tasks.SetColAttr(0, status_attr.Clone())
+        self.grid_tasks.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
 
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)
@@ -91,6 +92,7 @@ class AppWindow(AppWindowBase):
         self.grid_done.SetDropTarget(TaskListDropTarget(self.grid_done, 0))
         self.grid_done.SetSelectionMode(wx.grid.Grid.GridSelectRows)
         self.grid_done.SetColAttr(0, status_attr)
+        self.grid_done.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
 
@@ -117,6 +119,7 @@ class AppWindow(AppWindowBase):
         # until the table gets destroyed (i.e. until the frame is closed).
         self.comment_attr_provider = CommentAttrProvider()
         self.grid_comments.Table.SetAttrProvider(self.comment_attr_provider)
+        self.grid_comments.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
 
         self.grid_comments.Bind(wx.EVT_SIZE, self.OnGridSize)
 
@@ -187,13 +190,18 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def OnEditDescKeyDown(self, event):
-        if self.panel_desc_buttons.Shown:
-            if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
-                self.AskIfDiscardDescChanges()
-            elif event.KeyCode == wx.WXK_RETURN and event.GetModifiers() == wx.MOD_CONTROL:
-                self.SaveTaskChanges()
-
-        event.Skip()
+        # TODO: also unblock Alt+F4
+        # TODO: make a subclass of richtextctrl and handle the tab key in that class
+        if event.KeyCode == wx.WXK_TAB:
+            event.GetEventObject().Navigate(wx.NavigationKeyEvent.NavigationKeyEventFlags.FromTab + 
+                (0 if event.ShiftDown() else wx.NavigationKeyEvent.NavigationKeyEventFlags.IsForward))
+        else:
+            if self.panel_desc_buttons.Shown:
+                if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
+                    self.AskIfDiscardDescChanges()
+                elif event.KeyCode == wx.WXK_RETURN and event.GetModifiers() == wx.MOD_CONTROL:
+                    self.SaveTaskChanges()
+            event.Skip()
 
     # TODO: group the richtext and apply/cancel buttons into a separate widget
     # and reduce code duplication here. Well, maybe it's not a good idea because
