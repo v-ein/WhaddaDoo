@@ -13,6 +13,10 @@ class CollapseButton(wx.StaticText):
         self.caption = self.GetLabelText()
 
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
+        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_SET_FOCUS, self.OnFocusEvent)
+        self.Bind(wx.EVT_KILL_FOCUS, self.OnFocusEvent)
 
     def SetBuddy(self, buddy: wx.Window):
         self.buddy = buddy
@@ -33,3 +37,40 @@ class CollapseButton(wx.StaticText):
         self.buddy.Show(expand)
         self.SetLabel(self.caption, expand)
         self.buddy.GetContainingSizer().Layout()
+
+    def AcceptsFocus(self):
+        return True
+
+    def OnFocusEvent(self, event):
+        self.Refresh()
+        event.Skip()        
+
+    def OnPaint(self, event):
+        dc = wx.PaintDC(self)
+        renderer = wx.RendererNative.Get()
+        rect = self.GetClientRect()
+
+        # Set up colors
+        back_col = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNFACE)
+        text_col = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
+        dc.SetBrush(wx.Brush(back_col))
+        dc.SetTextBackground(back_col)
+        dc.SetTextForeground(text_col)
+
+        # Erase the entire background area in case the text label is smaller
+        # than the control itself.
+        dc.SetPen(wx.TRANSPARENT_PEN)
+        dc.DrawRectangle(rect)
+
+        # Now draw the label itself and its focus
+        dc.DrawText(self.GetLabelText(), 0, 0)
+        if self.HasFocus():
+            renderer.DrawFocusRect(self, dc, rect)
+
+    def OnKeyDown(self, event):
+        # TODO: neither left/right nor Enter actually work. Fix this.
+        if event.KeyCode == wx.WXK_LEFT or event.KeyCode == wx.WXK_RIGHT:
+            self.Expand(event.KeyCode == wx.WXK_RIGHT)
+        elif event.KeyCode == wx.WXK_RETURN or event.KeyCode == wx.WXK_SPACE:
+            self.Expand(not self.buddy.IsShown())
+        event.Skip()
