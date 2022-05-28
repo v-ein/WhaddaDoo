@@ -159,6 +159,7 @@ class AppWindow(AppWindowBase):
         self.label_done.Expand(False)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.grid_tasks.SetFocus()
 
     def OnClose(self, event):
         # TODO: make sure it's also called when the app is being closed due to
@@ -251,7 +252,7 @@ class AppWindow(AppWindowBase):
         # This handler is used for both grid_tasks and grid_done
         grid = event.GetEventObject()
         if event.GetCol() == 0:
-            event.GetEventObject().SetGridCursor(event.GetRow(), 1)
+            grid.SetGridCursor(event.GetRow(), 1)
             # Note: we deliberately disallow the grid to handle this event, otherwise
             # it will reset the position to column 0 even after our SetGridCursor call.
             event.Veto()
@@ -266,6 +267,17 @@ class AppWindow(AppWindowBase):
                 # Sometimes we might go out of range, e.g. when the table is empty
                 self.selected_task = None
             self.LoadTaskDetails()
+            event.Skip()
+
+    # TODO: as soon as the bug in wxWidgets that breaks row auto-sizing gets
+    # fixed, remove this handler (and remove column 0).
+    def OnGridCommentsSelectCell(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        if event.GetCol() == 0:
+            event.GetEventObject().SetGridCursor(event.GetRow(), 1)
+            # Note: we deliberately disallow the grid to handle this event, otherwise
+            # it will reset the position to column 0 even after our SetGridCursor call.
+            event.Veto()
+        else:
             event.Skip()
 
     def ShowDescButtons(self, show: bool = True):
