@@ -40,12 +40,12 @@ class AppWindowBase(wx.Frame):
 
         sizer_6 = wx.BoxSizer(wx.VERTICAL)
 
-        self.window_1 = wx.SplitterWindow(self.notebook_pane, wx.ID_ANY, style=0)
-        self.window_1.SetMinimumPaneSize(100)
-        self.window_1.SetSashGravity(0.5)
-        sizer_6.Add(self.window_1, 1, wx.ALL | wx.EXPAND, 8)
+        self.splitter_main = wx.SplitterWindow(self.notebook_pane, wx.ID_ANY, style=0)
+        self.splitter_main.SetMinimumPaneSize(100)
+        self.splitter_main.SetSashGravity(0.5)
+        sizer_6.Add(self.splitter_main, 1, wx.ALL | wx.EXPAND, 8)
 
-        self.window_1_pane_1 = wx.Panel(self.window_1, wx.ID_ANY)
+        self.window_1_pane_1 = wx.Panel(self.splitter_main, wx.ID_ANY)
 
         self.sizer_left_pane = wx.BoxSizer(wx.VERTICAL)
 
@@ -94,7 +94,7 @@ class AppWindowBase(wx.Frame):
         self.grid_tasks = ActiveTaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
         self.sizer_left_pane.Add(self.grid_tasks, 2, wx.EXPAND | wx.RIGHT | wx.TOP, 4)
 
-        self.window_1_pane_2 = wx.Panel(self.window_1, wx.ID_ANY)
+        self.window_1_pane_2 = wx.Panel(self.splitter_main, wx.ID_ANY)
 
         sizer_4 = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -256,7 +256,7 @@ class AppWindowBase(wx.Frame):
 
         self.window_1_pane_1.SetSizer(self.sizer_left_pane)
 
-        self.window_1.SplitVertically(self.window_1_pane_1, self.window_1_pane_2)
+        self.splitter_main.SplitVertically(self.window_1_pane_1, self.window_1_pane_2)
 
         self.notebook_pane.SetSizer(sizer_6)
 

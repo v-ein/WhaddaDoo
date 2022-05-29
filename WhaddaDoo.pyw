@@ -75,6 +75,9 @@ class AppWindow(AppWindowBase):
         AppWindowBase.__init__(self, *args, **kwds)
 
         self.SetName("MainFrame")
+        # TODO: how will this be stored with multiple tabs? a unique name for each tab?
+        self.splitter_main.SetName("MainSplitter")
+
         self.normal_pos = wx.Point(0, 0)
         self.normal_size = wx.Size(650, 550)
 
@@ -228,6 +231,7 @@ class AppWindow(AppWindowBase):
         self.SaveTaskChanges()
         self.SaveLabels()
         self.SaveBoard()
+        self.persist_mgr.SaveAndUnregister(self.splitter_main)
         self.persist_mgr.SaveAndUnregister(self)
         event.Skip()
 
@@ -497,6 +501,12 @@ class AppWindow(AppWindowBase):
         self.ResizeGridColumns(self.grid_tasks)
         self.ResizeGridColumns(self.grid_done)
         self.ResizeGridColumns(self.grid_comments)
+
+        # Can't do it in the frame's __init__() because for a maximized frame,
+        # maximizing actually happens *after* __init__(), and the frame remains
+        # in the 'restored' state all the way through __init__().
+        self.persist_mgr.RegisterAndRestore(self.splitter_main)
+
         for f in os.scandir("."):
             if f.is_dir() and os.path.isfile(os.path.join(f.path, "tasks.yaml")):
                 self.LoadBoard(f.name)
