@@ -12,11 +12,39 @@ from ui.app_gui import AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
 from ui.task_list import TaskListDropTarget, TaskStatusRenderer
+import wx.lib.agw.persist as persist
 
 # TODO: move to impl
 class NoAliasDumper(yaml.Dumper):
     def ignore_aliases(self, data):
         return True
+
+
+class MSWTLWHandler(persist.TLWHandler):
+    def __init__(self, pObject):
+        super().__init__(pObject)
+
+    def Save(self):
+        tlw, obj = self._window, self._pObject
+
+        pos = tlw.normal_pos
+        obj.SaveValue(persist.PERSIST_TLW_X, pos.x)
+        obj.SaveValue(persist.PERSIST_TLW_Y, pos.y)
+
+        size = tlw.normal_size
+        obj.SaveValue(persist.PERSIST_TLW_W, size.x)
+        obj.SaveValue(persist.PERSIST_TLW_H, size.y)
+
+        obj.SaveValue(persist.PERSIST_TLW_MAXIMIZED, tlw.IsMaximized())
+        obj.SaveValue(persist.PERSIST_TLW_ICONIZED, tlw.IsIconized())
+
+        # We explicitly skip the immediate superclass here because it would
+        # overwrite our saved values.
+        return persist.AUIHandler.Save(self)
+
+    def GetKind(self):
+        return "MSWWindow"
+
 
 class AppWindow(AppWindowBase):
 
@@ -40,8 +68,15 @@ class AppWindow(AppWindowBase):
     # SEARCH_TIMER_ID = 10
     SEARCH_DELAY = 500
 
+    normal_pos: wx.Point = None
+    normal_size: wx.Size = None
+
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
+
+        self.SetName("MainFrame")
+        self.normal_pos = wx.Point(0, 0)
+        self.normal_size = wx.Size(650, 550)
 
         self.font = wx.Font(wx.Size(0, 14), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
 
@@ -159,7 +194,32 @@ class AppWindow(AppWindowBase):
         self.label_done.Expand(False)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_MOVE, self.OnMove)
+
+        self.persist_mgr = persist.PersistenceManager.Get()
+        # TODO: find a better place for this config file
+        config_file = os.path.join(os.getcwd(), "WhaddaDoo_UI.ini")
+        self.persist_mgr.SetPersistenceFile(config_file)
+        self.persist_mgr.Register(self, MSWTLWHandler)
+        self.persist_mgr.Restore(self)
+
         self.grid_tasks.SetFocus()
+
+    def OnSize(self, event):
+        if not self.IsMaximized() and not self.IsIconized():
+            self.normal_size = event.Size
+        event.Skip()
+
+    def OnMove(self, event):
+        if not self.IsMaximized() and not self.IsIconized():
+            # Note: we cannot use `event.Position` because it contains the screen
+            # coordinates of the *client area*, whereas we need the screen coords
+            # of the window itself.  There's no easy way to convert from one to
+            # the other; the function GetClientAreaOrigin() seems to work incorrectly
+            # and always return (0, 0).
+            self.normal_pos = self.GetScreenPosition()
+        event.Skip()
 
     def OnClose(self, event):
         # TODO: make sure it's also called when the app is being closed due to
@@ -168,6 +228,7 @@ class AppWindow(AppWindowBase):
         self.SaveTaskChanges()
         self.SaveLabels()
         self.SaveBoard()
+        self.persist_mgr.SaveAndUnregister(self)
         event.Skip()
 
     def AskIfDiscardDescChanges(self):
