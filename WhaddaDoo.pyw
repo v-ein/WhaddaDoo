@@ -12,11 +12,42 @@ from ui.app_gui import AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
 from ui.task_list import TaskListDropTarget, TaskStatusRenderer
+import wx.lib.agw.persist as persist
 
 # TODO: move to impl
 class NoAliasDumper(yaml.Dumper):
     def ignore_aliases(self, data):
         return True
+
+
+class PyGeomSerializer(wx.TopLevelWindow.GeometrySerializer):
+    persist_obj = None
+
+    def __init__(self, persist_obj):
+        self.persist_obj = persist_obj
+
+    def SaveField(self, name, value):
+        return self.persist_obj.SaveValue(name, value)
+
+    def RestoreField(self, name, value):
+        pass
+        # value = self.persist_obj.RestoreValue(name)
+
+
+class MSWTLWHandler(persist.AUIHandler):
+    def __init__(self, pObject):
+        super().__init__(pObject)
+
+    def Save(self):
+        tlw, obj = self._window, self._pObject
+        tlw.SaveGeometry(PyGeomSerializer(obj))
+
+    def Restore(self):
+        pass
+
+    def GetKind(self):
+        return "MSWWindow"
+
 
 class AppWindow(AppWindowBase):
 
@@ -42,6 +73,8 @@ class AppWindow(AppWindowBase):
 
     def __init__(self, *args, **kwds):
         AppWindowBase.__init__(self, *args, **kwds)
+
+        self.SetName("MainFrame")
 
         self.font = wx.Font(wx.Size(0, 14), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
 
@@ -159,6 +192,13 @@ class AppWindow(AppWindowBase):
         self.label_done.Expand(False)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+        self.persist_mgr = persist.PersistenceManager.Get()
+        config_file = os.path.join(os.getcwd(), "WhaddaDoo.cfg")
+        self.persist_mgr.SetPersistenceFile(config_file)
+        # self.persist_mgr.RegisterAndRestore(self)
+        self.persist_mgr.Register(self, MSWTLWHandler)
+
         self.grid_tasks.SetFocus()
 
     def OnClose(self, event):
@@ -168,6 +208,7 @@ class AppWindow(AppWindowBase):
         self.SaveTaskChanges()
         self.SaveLabels()
         self.SaveBoard()
+        self.persist_mgr.SaveAndUnregister(self)
         event.Skip()
 
     def AskIfDiscardDescChanges(self):
