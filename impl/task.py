@@ -85,11 +85,13 @@ class Task:
     close_date: datetime.datetime = None
     # TODO: think if we need the 'reopened' flag
 
-    def __init__(self):
+    def __init__(self, summary="", desc=""):
         self.gen_id()
         self.creation_date = datetime.datetime.now()
         self.comments = []
         self.labels = []
+        self.summary = summary
+        self.desc = desc
 
     def gen_id(self):
         """

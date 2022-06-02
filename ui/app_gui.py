@@ -58,7 +58,7 @@ class AppWindowBase(wx.Frame):
         sizer_17.Add(self.edit_search, 1, wx.EXPAND | wx.RIGHT, 8)
 
         self.btn_adv_search = wx.Button(self.window_1_pane_1, wx.ID_ANY, "...")
-        self.btn_adv_search.SetMinSize((30, -1))
+        self.btn_adv_search.SetMinSize((24, -1))
         sizer_17.Add(self.btn_adv_search, 0, wx.RIGHT, 4)
 
         self.panel_done_tasks = wx.Panel(self.window_1_pane_1, wx.ID_ANY)
@@ -90,6 +90,10 @@ class AppWindowBase(wx.Frame):
 
         self.btn_new_task = wx.Button(self.panel_active_tasks, wx.ID_ANY, "&New task")
         sizer_8.Add(self.btn_new_task, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+
+        self.btn_active_more = wx.Button(self.panel_active_tasks, wx.ID_ANY, "...")
+        self.btn_active_more.SetMinSize((24, -1))
+        sizer_8.Add(self.btn_active_more, 0, wx.ALL, 4)
 
         self.grid_tasks = ActiveTaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
         self.sizer_left_pane.Add(self.grid_tasks, 2, wx.EXPAND | wx.RIGHT | wx.TOP, 4)
@@ -270,6 +274,7 @@ class AppWindowBase(wx.Frame):
         self.Bind(wx.EVT_TEXT, self.OnEditSearchChange, self.edit_search)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_done)
         self.Bind(wx.EVT_BUTTON, self.OnBtnNewTask, self.btn_new_task)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnActiveMore, self.btn_active_more)
         self.Bind(wx.grid.EVT_GRID_CMD_CELL_CHANGED, self.OnGridTasksCellChanged, self.grid_tasks)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_tasks)
         self.Bind(wx.EVT_BUTTON, self.OnBtnCancel, self.btn_cancel)
@@ -305,6 +310,10 @@ class AppWindowBase(wx.Frame):
 
     def OnBtnNewTask(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnBtnNewTask' not implemented!")
+        event.Skip()
+
+    def OnBtnActiveMore(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnActiveMore' not implemented!")
         event.Skip()
 
     def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
@@ -364,6 +373,29 @@ class AppWindowBase(wx.Frame):
         event.Skip()
 
 # end of class AppWindowBase
+
+class ActiveListMenuBase(wx.MenuBar):
+    def __init__(self, *args, **kwds):
+        # begin wxGlade: ActiveListMenuBase.__init__
+        wx.MenuBar.__init__(self, *args, **kwds)
+        wxglade_tmp_menu = wx.Menu()
+        item = wxglade_tmp_menu.Append(wx.ID_ANY, "Import from clipboard", "")
+        self.Bind(wx.EVT_MENU, self.OnImportFromClipboard, item)
+        item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Import from file", "")
+        self.Bind(wx.EVT_MENU, self.OnImportFromFile, item)
+        self.Append(wxglade_tmp_menu, "ActiveListMenu")
+
+        # end wxGlade
+
+    def OnImportFromClipboard(self, event):  # wxGlade: ActiveListMenuBase.<event_handler>
+        print("Event handler 'OnImportFromClipboard' not implemented!")
+        event.Skip()
+
+    def OnImportFromFile(self, event):  # wxGlade: ActiveListMenuBase.<event_handler>
+        print("Event handler 'OnImportFromFile' not implemented!")
+        event.Skip()
+
+# end of class ActiveListMenuBase
 
 class MyApp(wx.App):
     def OnInit(self):

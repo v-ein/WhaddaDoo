@@ -8,7 +8,7 @@ import os
 import tempfile
 import wx
 from impl.task import Epic, Task, TaskComment, TaskFilter, TaskStatus
-from ui.app_gui import AppWindowBase
+from ui.app_gui import ActiveListMenuBase, AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
 from ui.task_list import TaskListDropTarget, TaskStatusRenderer
@@ -44,6 +44,22 @@ class MSWTLWHandler(persist.TLWHandler):
 
     def GetKind(self):
         return "MSWWindow"
+
+
+class ActiveListMenu(ActiveListMenuBase):
+    def OnImportFromClipboard(self, event):  # wxGlade: ActiveListMenuBase.<event_handler>
+        if not wx.TheClipboard.IsOpened():
+            data_obj = wx.TextDataObject()
+            wx.TheClipboard.Open()
+            success = wx.TheClipboard.GetData(data_obj)
+            wx.TheClipboard.Close()
+            if success:
+                event.EventObject.InvokingWindow.ImportPlainText(data_obj.GetText())
+        event.Skip()
+
+    def OnImportFromFile(self, event):  # wxGlade: ActiveListMenuBase.<event_handler>
+        event.EventObject.InvokingWindow.ImportPlainTextFile()
+        event.Skip()
 
 
 class AppWindow(AppWindowBase):
@@ -485,7 +501,6 @@ class AppWindow(AppWindowBase):
         grid.SetColSize(last_col, max(new_width, 20))
         grid.AutoSizeRows()
 
-
     def OnGridSize(self, event):
         self.ResizeGridColumns(event.GetEventObject())
         event.Skip()
@@ -496,7 +511,6 @@ class AppWindow(AppWindowBase):
         self.LoadTaskDetails()
         event.Skip()
         
-
     def OnFrameShow(self, event):  # wxGlade: AppWindowBase.<event_handler>
         self.ResizeGridColumns(self.grid_tasks)
         self.ResizeGridColumns(self.grid_done)
@@ -795,6 +809,47 @@ class AppWindow(AppWindowBase):
     def OnTimer(self, event):
         self.FilterTasks(self.edit_search.Value)
         event.Skip()
+
+    def OnBtnActiveMore(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        menu_bar = ActiveListMenu()
+        # TODO: disable the 'import from clipboard' item if the clipboard
+        # contents is not suitable
+        menu = menu_bar.GetMenu(0)
+        # Need to detach it from the MenuBar before attaching to the frame
+        menu.Detach()
+        # Since wxGlade generates event handlers in the MenuBar subclass, we need
+        # to forward menu events to the menu bar.
+        self.Bind(wx.EVT_MENU, lambda event: menu_bar.GetEventHandler().ProcessEvent(event))
+        pt = self.ScreenToClient(self.btn_active_more.ScreenRect.BottomLeft)
+        self.PopupMenu(menu, pt)
+        # Clean it up
+        self.Unbind(wx.EVT_MENU)
+        menu.Destroy()
+
+        event.Skip()
+
+    # TODO: we probably need some options, e.g. separate tasks by empty lines
+    # (i.e. sequential non-empty lines go to the description of the same task)
+    def ImportPlainText(self, text):
+        new_tasks = [ Task(summary=line.strip()) for line in text.splitlines() if len(line.strip()) > 0 ]
+        for task in new_tasks:
+            self.tasks_pool[task.id] = task
+        self.grid_tasks.Table.InsertItems(0, new_tasks)
+        self.grid_tasks.AutoSizeRows()
+        self.grid_tasks.SetGridCursor(0, 1)
+        self.grid_tasks.SelectBlock(0, 0, len(new_tasks) - 1, 1)
+
+
+    def ImportPlainTextFile(self):
+        with wx.FileDialog(self, "Import tasks", wildcard="Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                       style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal() != wx.ID_CANCEL:
+                try:
+                    with open(fileDialog.GetPath(), "r") as f:
+                        self.ImportPlainText(f.read())
+                except IOError:
+                    # TODO: show an error message
+                    pass
 
 
 class MyApp(wx.App):
