@@ -1,114 +1,63 @@
-zzzzzzz:
+luvsrw:
   status: active
-  created: 2022-05-02 00:50:08
-  desc: First task.
-zzzzzzy:
+  created: 2022-06-02 23:16:58
+  desc: Add an application icon.
+luw3ri:
   status: active
-  created: 2022-05-02 00:50:08
-  deadline: 2022-05-25
-  epic: TestEpic
-  desc: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-    incididunt ut labore et dolore magna aliqua.
-  comments:
-  - date: 2022-04-23 23:18:59
-    text: Test comment 0
-  - date: 2022-04-23 23:18:59
-    text: Test comment 1
-  - date: 2022-04-23 23:18:59
-    text: Test comment 2
-  - date: 2022-04-23 23:18:59
-    text: Test comment 3
-  - date: 2022-04-23 23:18:59
-    text: Test comment 4
-  - date: 2022-04-23 23:18:59
-    text: Test comment 5
-  - date: 2022-04-23 23:18:59
-    text: Test comment 6
-  - date: 2022-04-23 23:18:59
-    text: Test comment 7
-  - date: 2022-04-23 23:18:59
-    text: Test comment 8
-  - date: 2022-04-23 23:18:59
-    text: Test comment 9
-'0':
+  created: 2022-06-02 23:19:20
+  desc: 'Fix Alt+key mnemonics.
+
+
+    As of version 0.1, they don''t work in certain widgets, e.g. Alt+M (''Comment'')
+    doesn''t work in the left pane of the splitter.'
+luwjmw:
   status: active
-  created: 2022-05-02 00:50:08
-  deadline: 2022-05-03
-  desc: test - line 0
-'1':
+  created: 2022-06-02 23:22:46
+  desc: Make Alt+F4 work in the description box.
+luwpfz:
   status: active
-  created: 2022-05-02 00:50:08
-  deadline: 2022-05-12
-  desc: test - line 1
-  comments:
-  - date: 2022-05-09 00:52:37
-    text: First comment here!
-'2':
-  status: cancelled
-  created: 2022-05-02 00:50:08
-  desc: test - line 2
-'3':
+  created: 2022-06-02 23:24:01
+  desc: Make Shift+Tab in grids move focus backwards.
+luwt93:
   status: active
-  created: 2022-05-02 00:50:08
-  deadline: 2022-05-14
-  desc: test - line 3
-'4':
-  status: done
-  created: 2022-05-02 00:50:08
-  desc: test - line 4
-'5':
+  created: 2022-06-02 23:24:50
+  desc: Disable double filtering on Enter.
+luwyk4:
   status: active
-  created: 2022-05-02 00:50:08
-  epic: TestEpic
-  desc: test - line 5
-'6':
-  status: done
-  created: 2022-05-02 00:50:08
-  closed: 2022-05-08 22:52:15
-  desc: test - line 6
-'7':
+  created: 2022-06-02 23:25:59
+  desc: 'Add keyboard shortcuts for certain splitter positions.
+
+
+    Ctrl+1...Ctrl+5 should move splitter to 0-33-50-66-100%.'
+lux4sd:
   status: active
-  created: 2022-05-02 00:50:08
-  desc: test - line 7
-h5g6a2:
+  created: 2022-06-02 23:27:20
+  desc: 'Remove gaps in drag''n''drop.
+
+
+    Right now there are gaps between the grids and the ''Done''/''Active'' pseudo-buttons.'
+luxidi:
   status: active
-  created: 2022-05-02 00:50:08
-  desc: A new task.
-  comments:
-  - date: 2022-05-02 00:18:36
-    text: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-      tempor incididunt ut labore et dolore magna aliqua.
-  - date: 2022-05-02 00:31:04
-    text: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-      tempor incididunt ut labore et dolore magna aliqua.
-h5gzt1:
+  created: 2022-06-02 23:30:16
+  desc: 'Enable resizing of the status column.
+
+
+    This is to allow it to show long lists of labels, or long epic names.'
+luxuib:
   status: active
-  created: 2022-05-02 00:50:08
-  desc: Another new task.
-h5rvb6:
+  created: 2022-06-02 23:32:53
+  desc: 'Add auto-saving on idle.
+
+
+    A good time to save the board might be "the last edit plus 3 minutes".'
+luyb3l:
   status: active
-  created: 2022-05-02 00:50:08
-  desc: Some text here
-  comments:
-  - date: 2022-05-01 23:55:52
-    text: Why the hell doesn't clipboard work on Ctrl+Ins?
-  - date: 2022-05-01 23:57:23
-    text: Long long long long long long long long long long long comment.
-  - date: 2022-05-01 23:57:33
-    text: ' long long long long long long long long long long long long long long
-      long long long long long long long long comment'
-  - date: 2022-05-02 00:28:34
-    text: One more comment.
-halvbu:
+  created: 2022-06-02 23:36:28
+  desc: 'Sort the ''done'' list by date.
+
+
+    Also do it after drag''n''drop'''
+luyg17:
   status: active
-  created: 2022-05-02 00:50:15
-  desc: A task with a date.
-hfv0y6:
-  status: active
-  created: 2022-05-03 01:21:07
-  desc: Another task with a date.
-if5go5:
-  status: active
-  created: 2022-05-09 22:00:02
-  deadline: 2022-05-20
-  desc: Deadline.
+  created: 2022-06-02 23:37:32
+  desc: Enable right-click and context menu in the task lists.

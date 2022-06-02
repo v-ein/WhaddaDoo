@@ -307,7 +307,9 @@ class AppWindow(AppWindowBase):
 
     def OnGridChar(self, event):
         if event.KeyCode == wx.WXK_INSERT and not event.HasAnyModifiers():
-            self.InsertNewTask(self.grid_tasks.GridCursorRow)
+            # If the table is empty, GridCursorRow might well be -1, and we
+            # can't insert items at -1.  That's why we limit it at 0.
+            self.InsertNewTask(max(self.grid_tasks.GridCursorRow, 0))
 
         event.Skip()
 
