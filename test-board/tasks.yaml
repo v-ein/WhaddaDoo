@@ -1,0 +1,63 @@
+luvsrw:
+  status: active
+  created: 2022-06-02 23:16:58
+  desc: Add an application icon.
+luw3ri:
+  status: active
+  created: 2022-06-02 23:19:20
+  desc: 'Fix Alt+key mnemonics.
+
+
+    As of version 0.1, they don''t work in certain widgets, e.g. Alt+M (''Comment'')
+    doesn''t work in the left pane of the splitter.'
+luwjmw:
+  status: active
+  created: 2022-06-02 23:22:46
+  desc: Make Alt+F4 work in the description box.
+luwpfz:
+  status: active
+  created: 2022-06-02 23:24:01
+  desc: Make Shift+Tab in grids move focus backwards.
+luwt93:
+  status: active
+  created: 2022-06-02 23:24:50
+  desc: Disable double filtering on Enter.
+luwyk4:
+  status: active
+  created: 2022-06-02 23:25:59
+  desc: 'Add keyboard shortcuts for certain splitter positions.
+
+
+    Ctrl+1...Ctrl+5 should move splitter to 0-33-50-66-100%.'
+lux4sd:
+  status: active
+  created: 2022-06-02 23:27:20
+  desc: 'Remove gaps in drag''n''drop.
+
+
+    Right now there are gaps between the grids and the ''Done''/''Active'' pseudo-buttons.'
+luxidi:
+  status: active
+  created: 2022-06-02 23:30:16
+  desc: 'Enable resizing of the status column.
+
+
+    This is to allow it to show long lists of labels, or long epic names.'
+luxuib:
+  status: active
+  created: 2022-06-02 23:32:53
+  desc: 'Add auto-saving on idle.
+
+
+    A good time to save the board might be "the last edit plus 3 minutes".'
+luyb3l:
+  status: active
+  created: 2022-06-02 23:36:28
+  desc: 'Sort the ''done'' list by date.
+
+
+    Also do it after drag''n''drop'''
+luyg17:
+  status: active
+  created: 2022-06-02 23:37:32
+  desc: Enable right-click and context menu in the task lists.
