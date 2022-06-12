@@ -98,7 +98,7 @@ class Task:
         Generates an ID for this task based off the current date and time.
         Since the tasks are typically created manually, timestamp-based IDs
         are going to be sufficiently unique; in case of automated procedures,
-        however, we'll need to improve tis process.
+        however, we'll need to improve this process.
 
         Returns the generated id (and assigns it to Task.id, too).
         """

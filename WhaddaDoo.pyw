@@ -6,6 +6,7 @@
 import datetime
 import os
 import tempfile
+import time
 import wx
 from impl.task import Epic, Task, TaskComment, TaskFilter, TaskStatus
 from ui.app_gui import ActiveListMenuBase, AppWindowBase
@@ -834,8 +835,17 @@ class AppWindow(AppWindowBase):
     # (i.e. sequential non-empty lines go to the description of the same task)
     def ImportPlainText(self, text):
         new_tasks = [ Task(summary=line.strip()) for line in text.splitlines() if len(line.strip()) > 0 ]
+        
+        base_id = int(time.time() * 100)
         for task in new_tasks:
+            # Overriding the default task ID, because it's not guaranteed to be
+            # unique for tasks series created too fast.
+            task.set_numeric_id(base_id)
+            # We don't want a clash with other default IDs, so let's add a prefix
+            task.id = "imp-" + task.id
+            base_id -= 1
             self.tasks_pool[task.id] = task
+
         self.grid_tasks.Table.InsertItems(0, new_tasks)
         self.grid_tasks.AutoSizeRows()
         self.grid_tasks.SetGridCursor(0, 1)
