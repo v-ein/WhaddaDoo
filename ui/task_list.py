@@ -340,6 +340,14 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
                 label_renderer.DrawLabel(dc, label, wx.Colour(232, 232, 232), wx.Colour(0, 0, 0), True)
 
 
+TaskListDropEventType = wx.NewEventType()
+EVT_TASK_LIST_DROP = wx.PyEventBinder(TaskListDropEventType, 0)
+
+class TaskListDropEvent(wx.CommandEvent):
+    def __init__(self):
+        wx.Event.__init__(self, commandEventType = TaskListDropEventType)
+   
+
 class TaskList(wx.grid.Grid):
 
     # A dirty trick to link the drop target to the drag source. We need
@@ -518,6 +526,10 @@ class TaskList(wx.grid.Grid):
             # (still need the 'else' branch here)
             if len(items) == 1:
                 self.SetGridCursor(index, 1)
+        
+        # TODO: maybe call ProcessEvent directly? does PostEvent use a queue? is it critical for us?
+        # TODO: maybe pass extra data like what items were dropped and where
+        wx.PostEvent(self.GetEventHandler(), TaskListDropEvent())
 
 
     def MoveDropPlaceholder(self, index):

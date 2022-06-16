@@ -12,7 +12,7 @@ from impl.task import Epic, Task, TaskComment, TaskFilter, TaskStatus
 from ui.app_gui import ActiveListMenuBase, AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
-from ui.task_list import TaskListDropTarget, TaskStatusRenderer
+from ui.task_list import TaskListDropTarget, TaskStatusRenderer, EVT_TASK_LIST_DROP
 import wx.lib.agw.persist as persist
 
 # TODO: move to impl
@@ -134,6 +134,7 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)
         self.grid_tasks.Bind(wx.EVT_KEY_DOWN, self.OnGridKeyDown)
+        self.grid_tasks.Bind(EVT_TASK_LIST_DROP, self.OnGridDropItems)
 
         self.grid_done.SetGridLineColour(wx.Colour(224, 224, 224))
         self.grid_done.AutoSizeColLabelSize(0)
@@ -155,6 +156,7 @@ class AppWindow(AppWindowBase):
         self.grid_done.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
+        self.grid_done.Bind(EVT_TASK_LIST_DROP, self.OnGridDropItems)
 
         self.grid_comments.HideRowLabels()
         self.grid_comments.HideColLabels()
@@ -328,7 +330,8 @@ class AppWindow(AppWindowBase):
 
             # Moving the selected items up or down
             self.grid_tasks.MoveSelectedItems(-1 if event.KeyCode == wx.WXK_UP else 1)
-            self.HandleBoardChange()
+            # MoveSelectedItems will generate a TaskListDropEvent, which in turn fires
+            # HandleBoardChange(), so we don't need to signal the board change separately.
 
         elif event.KeyCode == wx.WXK_RETURN:
             # Preventing the grid from moving the cursor down after editing
@@ -903,6 +906,11 @@ class AppWindow(AppWindowBase):
 
     def OnAutosaveTimer(self, event):
         self.SaveBoard()
+        event.Skip()
+
+    def OnGridDropItems(self, event):
+        print("Drop event")
+        self.HandleBoardChange()
         event.Skip()
 
 
