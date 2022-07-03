@@ -12,7 +12,7 @@ from impl.task import Epic, Task, TaskComment, TaskFilter, TaskStatus
 from ui.app_gui import ActiveListMenuBase, AppWindowBase
 import yaml
 from ui.comment_list import CommentAttrProvider
-from ui.task_list import TaskListDropTarget, TaskStatusRenderer
+from ui.task_list import TaskListDropTarget, TaskStatusRenderer, EVT_TASK_LIST_DROP
 import wx.lib.agw.persist as persist
 
 # TODO: move to impl
@@ -81,8 +81,13 @@ class AppWindow(AppWindowBase):
     # gets fixed.
     ignore_edit_change = False
 
+    autosave_timer = None
+    # seconds
+    AUTOSAVE_DELAY = 120
+    board_modified = False
+
     search_timer = None
-    # SEARCH_TIMER_ID = 10
+    # milliseconds
     SEARCH_DELAY = 500
 
     normal_pos: wx.Point = None
@@ -129,6 +134,7 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)
         self.grid_tasks.Bind(wx.EVT_KEY_DOWN, self.OnGridKeyDown)
+        self.grid_tasks.Bind(EVT_TASK_LIST_DROP, self.OnGridDropItems)
 
         self.grid_done.SetGridLineColour(wx.Colour(224, 224, 224))
         self.grid_done.AutoSizeColLabelSize(0)
@@ -150,6 +156,7 @@ class AppWindow(AppWindowBase):
         self.grid_done.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
+        self.grid_done.Bind(EVT_TASK_LIST_DROP, self.OnGridDropItems)
 
         self.grid_comments.HideRowLabels()
         self.grid_comments.HideColLabels()
@@ -180,7 +187,7 @@ class AppWindow(AppWindowBase):
 
         self.edit_search.Bind(wx.EVT_CHAR, self.OnEditSearchChar)
         self.search_timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.Bind(wx.EVT_TIMER, self.OnSearchTimer, self.search_timer)
 
         self.edit_desc.Bind(wx.EVT_TEXT, self.OnEditDescTextChange)
         self.edit_desc.Bind(wx.EVT_KEY_DOWN, self.OnEditDescKeyDown)
@@ -216,6 +223,9 @@ class AppWindow(AppWindowBase):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_MOVE, self.OnMove)
+
+        self.autosave_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnAutosaveTimer, self.autosave_timer)
 
         self.persist_mgr = persist.PersistenceManager.Get()
         # TODO: find a better place for this config file
@@ -320,6 +330,8 @@ class AppWindow(AppWindowBase):
 
             # Moving the selected items up or down
             self.grid_tasks.MoveSelectedItems(-1 if event.KeyCode == wx.WXK_UP else 1)
+            # MoveSelectedItems will generate a TaskListDropEvent, which in turn fires
+            # HandleBoardChange(), so we don't need to signal the board change separately.
 
         elif event.KeyCode == wx.WXK_RETURN:
             # Preventing the grid from moving the cursor down after editing
@@ -388,7 +400,9 @@ class AppWindow(AppWindowBase):
         paragraphs = desc.split("\n")
         summary = paragraphs[0]
         desc = "\n".join(paragraphs[1:])
-        # TODO: we need to compare desc in order to set the modified flag for the board
+        # Updating the 'modified' flag
+        self.HandleBoardChange(task.desc != desc or task.summary != summary)
+
         task.desc = desc
         if summary != task.summary:
             task.summary = summary
@@ -455,6 +469,7 @@ class AppWindow(AppWindowBase):
 
     def OnDateDeadlineChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
         if self.selected_task is not None:
+            self.HandleBoardChange()
             dt = event.GetEventObject().Value
             self.selected_task.deadline = datetime.date(dt.year, dt.month + 1, dt.day)
             # TODO: only repaint the current task, and ideally only the status cell
@@ -463,6 +478,7 @@ class AppWindow(AppWindowBase):
 
     def OnComboEpicChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
         if self.selected_task is not None:
+            self.HandleBoardChange()
             combo = event.GetEventObject()
             sel_epic_id = combo.GetClientData(combo.GetSelection())
             self.selected_task.epic = self.epics_pool[sel_epic_id] if sel_epic_id is not None \
@@ -474,7 +490,9 @@ class AppWindow(AppWindowBase):
 
     def SaveLabels(self):
         if self.selected_task is not None:
-            self.selected_task.labels = sorted(self.edit_labels.Value.split())
+            new_labels = sorted(self.edit_labels.Value.split())
+            self.HandleBoardChange(self.selected_task.labels != new_labels)
+            self.selected_task.labels = new_labels
             # TODO: only repaint the current task, and ideally only the status cell
             self.grid_tasks.ForceRefresh()
             self.grid_done.ForceRefresh()
@@ -509,6 +527,7 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        self.HandleBoardChange()
         self.grid_tasks.AutoSizeRow(event.GetRow())
         # We need to reload the description box on the right side.
         self.LoadTaskDetails()
@@ -538,6 +557,7 @@ class AppWindow(AppWindowBase):
 
     def NewBoard(self, board_id):
         self.board_id = board_id
+        self.board_modified = False
         self.tasks_pool = {}
         self.epics_pool = {}
         self.InitBoardWidgets([], [])
@@ -593,6 +613,8 @@ class AppWindow(AppWindowBase):
             self.ReplaceFile(os.path.join(dir_name, "tasks.yaml"), tasks_file_name)
             self.ReplaceFile(os.path.join(dir_name, "active.txt"), index_file_name)
 
+            self.board_modified = False
+
         except OSError:
             # TODO: !!IMPORTANT!! show an error message
             pass
@@ -635,6 +657,7 @@ class AppWindow(AppWindowBase):
     
     def LoadBoard(self, board_id):
         self.board_id = board_id
+        self.board_modified = False
         self.tasks_pool = {}
         active_tasks = []
         dir_name = self.board_id
@@ -690,6 +713,7 @@ class AppWindow(AppWindowBase):
         if task is None:
             # Nothing to do here
             return
+        self.HandleBoardChange()
         task.set_status(final_status)
         self.grid_tasks.DeleteRows(self.selected_task_row)
         self.grid_done.GetTable().InsertItems(0, [task])
@@ -705,6 +729,7 @@ class AppWindow(AppWindowBase):
         if task is None:
             # Nothing to do here
             return
+        self.HandleBoardChange()
         task.set_status(TaskStatus.ACTIVE)
         self.grid_done.DeleteRows(self.selected_task_row)
         self.grid_tasks.GetTable().InsertItems(0, [task])
@@ -718,6 +743,7 @@ class AppWindow(AppWindowBase):
         self.LoadTaskDetails()
 
     def InsertNewTask(self, row):
+        self.HandleBoardChange()
         task = Task()
         self.tasks_pool[task.id] = task
         self.grid_tasks.Table.InsertItems(row, [task])
@@ -767,6 +793,9 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def AddNewComment(self):
+        # TODO: make sure there's a selected task (e.g. can't add a comment if
+        # the board is empty)
+        self.HandleBoardChange()
         comment = TaskComment(self.edit_comment.Value)
         self.grid_comments.Table.AddNewComment(comment)
         self.ShowCommentEditor(False)
@@ -809,7 +838,7 @@ class AppWindow(AppWindowBase):
 
         event.Skip()
 
-    def OnTimer(self, event):
+    def OnSearchTimer(self, event):
         self.FilterTasks(self.edit_search.Value)
         event.Skip()
 
@@ -834,6 +863,7 @@ class AppWindow(AppWindowBase):
     # TODO: we probably need some options, e.g. separate tasks by empty lines
     # (i.e. sequential non-empty lines go to the description of the same task)
     def ImportPlainText(self, text):
+        self.HandleBoardChange()
         new_tasks = [ Task(summary=line.strip()) for line in text.splitlines() if len(line.strip()) > 0 ]
         
         base_id = int(time.time() * 100)
@@ -862,6 +892,26 @@ class AppWindow(AppWindowBase):
                 except IOError:
                     # TODO: show an error message
                     pass
+
+    def HandleBoardChange(self, really_modified = True):
+        """
+        Processes a change to the board contents.  If `really_modified` is True,
+        the 'dirty' flag is triggered, and the auto-save timer is started.
+        If `really_modified` is False, does nothing - this can be used in places
+        where the caller needs to compare new contents against the old one.
+        """
+        if really_modified:
+            self.board_modified = True
+            self.autosave_timer.StartOnce(self.AUTOSAVE_DELAY * 1000)
+
+    def OnAutosaveTimer(self, event):
+        self.SaveBoard()
+        event.Skip()
+
+    def OnGridDropItems(self, event):
+        print("Drop event")
+        self.HandleBoardChange()
+        event.Skip()
 
 
 class MyApp(wx.App):
