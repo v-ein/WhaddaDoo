@@ -305,11 +305,12 @@ class TaskFilter:
         if self.always_pass:
             return True
 
-        if self.epic != "" and task.epic.id != self.epic:
+        # If filtering by epic, we'll remove tasks that don't belong to an epic
+        if self.epic != "" and (task.epic is None or task.epic.id.lower() != self.epic):
             return False
 
         for label in self.labels:
-            if label not in [ task_label.lower for task_label in task.labels ]:
+            if label not in [ task_label.lower() for task_label in task.labels ]:
                 return False
         
         # TODO: search in comments, too
