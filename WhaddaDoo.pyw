@@ -449,6 +449,10 @@ class AppWindow(AppWindowBase):
         self.edit_labels.Value = " ".join(task.labels)
 
         if task.deadline is None:
+            # First set it to a specific value (tomorrow) - when the user clicks
+            # the checkbox, this value will be selected by default.
+            self.date_deadline.Value = wx.DateTime.Today().Add(wx.DateSpan(days = 1))
+            # Now set it to a null date in order to uncheck the checkbox.
             self.date_deadline.Value = wx.DefaultDateTime
         else:
             d = task.deadline
@@ -471,7 +475,8 @@ class AppWindow(AppWindowBase):
         if self.selected_task is not None:
             self.HandleBoardChange()
             dt = event.GetEventObject().Value
-            self.selected_task.deadline = datetime.date(dt.year, dt.month + 1, dt.day)
+            self.selected_task.deadline = datetime.date(dt.year, dt.month + 1, dt.day) if dt.IsValid() \
+                else None
             # TODO: only repaint the current task, and ideally only the status cell
             self.grid_tasks.ForceRefresh()
         event.Skip()
