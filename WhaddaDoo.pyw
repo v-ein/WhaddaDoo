@@ -133,7 +133,7 @@ class AppWindow(AppWindowBase):
 
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)
-        self.grid_tasks.Bind(wx.EVT_KEY_DOWN, self.OnGridKeyDown)
+        self.grid_tasks.Bind(wx.EVT_KEY_DOWN, self.OnGridTasksKeyDown)
         self.grid_tasks.Bind(EVT_TASK_LIST_DROP, self.OnGridDropItems)
 
         self.grid_done.SetGridLineColour(wx.Colour(224, 224, 224))
@@ -156,6 +156,7 @@ class AppWindow(AppWindowBase):
         self.grid_done.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
+        self.grid_done.Bind(wx.EVT_KEY_DOWN, self.OnGridDoneKeyDown)
         self.grid_done.Bind(EVT_TASK_LIST_DROP, self.OnGridDropItems)
 
         self.grid_comments.HideRowLabels()
@@ -324,7 +325,16 @@ class AppWindow(AppWindowBase):
 
         event.Skip()
 
-    def OnGridKeyDown(self, event):
+    def OnGridDoneKeyDown(self, event):
+        if event.KeyCode == wx.WXK_ESCAPE:
+            self.edit_search.Clear()
+            self.FilterTasks("")
+            # TODO: FilterTasks() resets the focus to the first cell.
+            # We need to keep the focus on re-filtering.
+        else:
+            event.Skip()
+
+    def OnGridTasksKeyDown(self, event):
         if event.GetModifiers() == wx.MOD_CONTROL and \
             (event.KeyCode == wx.WXK_UP or event.KeyCode == wx.WXK_DOWN):
 
@@ -340,6 +350,12 @@ class AppWindow(AppWindowBase):
             else:
                 # If there's no editor, let the grid do the default stuff
                 event.Skip()
+
+        elif event.KeyCode == wx.WXK_ESCAPE:
+            self.edit_search.Clear()
+            self.FilterTasks("")
+            # TODO: FilterTasks() resets the focus to the first cell.
+            # We need to keep the focus on re-filtering.
 
         else:
             event.Skip()
