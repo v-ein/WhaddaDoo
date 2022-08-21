@@ -208,8 +208,8 @@ class AppWindow(AppWindowBase):
 
         self.edit_labels.Bind(wx.EVT_KILL_FOCUS, self.OnEditLabelsKillFocus)
 
-        self.label_done.SetBuddy(self.grid_done)
-        self.label_active.SetBuddy(self.grid_tasks)
+        self.label_done.SetBuddy(self.grid_done, self.panel_done_grid_buttons)
+        self.label_active.SetBuddy(self.grid_tasks, self.panel_active_grid_buttons)
 
         # These drop targets include the collapser 'buttons' and static lines
         self.panel_done_tasks.SetDropTarget(TaskListDropTarget(self.grid_done, 0))
@@ -435,9 +435,6 @@ class AppWindow(AppWindowBase):
         # TODO: think whether we want to gray it out
         is_active = (task.status == TaskStatus.ACTIVE)
         self.edit_desc.Enabled = is_active
-        self.panel_active_workflow_buttons.Show(is_active)
-        self.panel_completed_workflow_buttons.Show(not is_active)
-        self.panel_active_workflow_buttons.ContainingSizer.Layout()
 
         self.label_created.LabelText = task.creation_date.isoformat(" ", "minutes")
         has_close_date = task.close_date is not None
@@ -769,6 +766,8 @@ class AppWindow(AppWindowBase):
         event.Skip()
 
     def OnBtnNewTask(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        if not self.grid_tasks.IsShown():
+            self.label_active.Expand()
         self.InsertNewTask(0)
         event.Skip()
 

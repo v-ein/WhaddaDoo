@@ -1,11 +1,12 @@
 # Copyright © 2022 Vladimir Ein. All rights reserved.
 # License: http://opensource.org/licenses/MIT
 # 
+from typing import List
 import wx
 
 class CollapseButton(wx.StaticText):
 
-    buddy: wx.Window = None
+    buddies: List[wx.Window] = []
     caption: str = ""
 
     def __init__(self, *arg, **kw):
@@ -18,25 +19,29 @@ class CollapseButton(wx.StaticText):
         self.Bind(wx.EVT_SET_FOCUS, self.OnFocusEvent)
         self.Bind(wx.EVT_KILL_FOCUS, self.OnFocusEvent)
 
-    def SetBuddy(self, buddy: wx.Window):
-        self.buddy = buddy
+    def SetBuddy(self, *buddy: wx.Window):
+        self.buddies = list(buddy)
         self.SetLabel(self.caption)
 
     def OnMouseUp(self, event):
         # Reversing the expanded state
-        self.Expand(not self.buddy.IsShown())
+        self.Expand(not self.buddies[0].IsShown())
         event.Skip()
         
     def SetLabel(self, label, expanded=None):
         if expanded is None:
-            expanded = self.buddy.IsShown()
+            expanded = self.buddies[0].IsShown()
         self.caption = label
         super().SetLabel(("\u25BC " if expanded else "\u25B6 ") + label)
 
     def Expand(self, expand=True):
-        self.buddy.Show(expand)
+        for buddy in self.buddies:
+            buddy.Show(expand)
         self.SetLabel(self.caption, expand)
-        self.buddy.GetContainingSizer().Layout()
+        # TODO: avoid calling Layout() twice on the same sizer. Better collect
+        # a set of sizers to refresh in the previous for loop.
+        for buddy in self.buddies:
+            buddy.GetContainingSizer().Layout()
 
     def AcceptsFocus(self):
         return True
@@ -72,5 +77,5 @@ class CollapseButton(wx.StaticText):
         if event.KeyCode == wx.WXK_LEFT or event.KeyCode == wx.WXK_RIGHT:
             self.Expand(event.KeyCode == wx.WXK_RIGHT)
         elif event.KeyCode == wx.WXK_RETURN or event.KeyCode == wx.WXK_SPACE:
-            self.Expand(not self.buddy.IsShown())
+            self.Expand(not self.buddies[0].IsShown())
         event.Skip()
