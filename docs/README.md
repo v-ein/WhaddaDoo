@@ -6,12 +6,17 @@ WhaddaDoo is a personal to-do list tool.
 - It is entirely local and works offline.
 - Inspired by Agile practices, it aims to help with prioritization in the first place. Its main purpose is to answer the question, "What should I do now?"
 
+# DISCLAIMER
+
+This is an alpha version. It's not supposed to be stable, or to work correctly, and it is definitely **NOT foolproof**.
+
 # Requirements
 
 WhaddaDoo requires the following software to be installed on your machine:
 
 - Python 3.8
 - wxPython 4.1.1
+- PyYAML 6.0
 
 It might work on older versions of these products, but it has not been tested with the older versions. Before reporting a bug, make sure you have the versions listed above or newer versions of these packages.
 
@@ -32,6 +37,14 @@ For 'pure' Python classes, however, I prefer to use the naming recommended in PE
 ## Python version
 
 I have reasons to stick to Python 3.8. There are places in the code that could look more elegant with a newer version of Python; however, for now I'm keeping the code compatible with 3.8. This may change in future.
+
+## How to contribute
+
+This is yet to be defined. If you're interested in working on this project, please let me know via email or GitHub, and we'll find a way to do that.
+
+## Bugs
+
+Before reporting any bugs, please check [the list of known issues](docs/KnownIssues.md).
 
 # License
 

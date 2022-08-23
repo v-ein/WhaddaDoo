@@ -98,7 +98,7 @@ class Task:
         Generates an ID for this task based off the current date and time.
         Since the tasks are typically created manually, timestamp-based IDs
         are going to be sufficiently unique; in case of automated procedures,
-        however, we'll need to improve tis process.
+        however, we'll need to improve this process.
 
         Returns the generated id (and assigns it to Task.id, too).
         """
@@ -305,11 +305,12 @@ class TaskFilter:
         if self.always_pass:
             return True
 
-        if self.epic != "" and task.epic.id != self.epic:
+        # If filtering by epic, we'll remove tasks that don't belong to an epic
+        if self.epic != "" and (task.epic is None or task.epic.id.lower() != self.epic):
             return False
 
         for label in self.labels:
-            if label not in [ task_label.lower for task_label in task.labels ]:
+            if label not in [ task_label.lower() for task_label in task.labels ]:
                 return False
         
         # TODO: search in comments, too

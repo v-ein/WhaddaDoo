@@ -25,7 +25,7 @@ class AppWindowBase(wx.Frame):
         # begin wxGlade: AppWindowBase.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.SetSize((650, 550))
+        self.SetSize((750, 550))
         self.SetTitle("WhaddaDoo")
 
         self.panel_1 = wx.Panel(self, wx.ID_ANY)
@@ -68,10 +68,18 @@ class AppWindowBase(wx.Frame):
 
         self.label_done = ui.controls.CollapseButton(self.panel_done_tasks, wx.ID_ANY, "Done")
         self.label_done.SetFont(wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, 0, "Segoe UI"))
-        sizer_7.Add(self.label_done, 0, wx.BOTTOM, 4)
+        sizer_7.Add(self.label_done, 0, wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM, 4)
 
         static_line_1 = wx.StaticLine(self.panel_done_tasks, wx.ID_ANY)
         sizer_7.Add(static_line_1, 1, wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM | wx.LEFT | wx.RIGHT, 4)
+
+        self.panel_done_grid_buttons = wx.Panel(self.panel_done_tasks, wx.ID_ANY)
+        sizer_7.Add(self.panel_done_grid_buttons, 0, wx.EXPAND, 0)
+
+        sizer_10 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_reopen = wx.Button(self.panel_done_grid_buttons, wx.ID_ANY, "&Reopen")
+        sizer_10.Add(self.btn_reopen, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 4)
 
         self.grid_done = CompletedTaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
         self.sizer_left_pane.Add(self.grid_done, 1, wx.BOTTOM | wx.EXPAND | wx.RIGHT, 4)
@@ -91,9 +99,20 @@ class AppWindowBase(wx.Frame):
         self.btn_new_task = wx.Button(self.panel_active_tasks, wx.ID_ANY, "&New task")
         sizer_8.Add(self.btn_new_task, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
 
-        self.btn_active_more = wx.Button(self.panel_active_tasks, wx.ID_ANY, "...")
+        self.panel_active_grid_buttons = wx.Panel(self.panel_active_tasks, wx.ID_ANY)
+        sizer_8.Add(self.panel_active_grid_buttons, 0, wx.EXPAND, 0)
+
+        sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_cancel = wx.Button(self.panel_active_grid_buttons, wx.ID_ANY, "&Cancel task")
+        sizer_2.Add(self.btn_cancel, 0, wx.ALL, 4)
+
+        self.btn_done = wx.Button(self.panel_active_grid_buttons, wx.ID_ANY, "&Done")
+        sizer_2.Add(self.btn_done, 0, wx.ALL, 4)
+
+        self.btn_active_more = wx.Button(self.panel_active_grid_buttons, wx.ID_ANY, "...")
         self.btn_active_more.SetMinSize((24, -1))
-        sizer_8.Add(self.btn_active_more, 0, wx.ALL, 4)
+        sizer_2.Add(self.btn_active_more, 0, wx.ALL, 4)
 
         self.grid_tasks = ActiveTaskList(self.window_1_pane_1, wx.ID_ANY, size=(1, 1))
         self.sizer_left_pane.Add(self.grid_tasks, 2, wx.EXPAND | wx.RIGHT | wx.TOP, 4)
@@ -108,36 +127,11 @@ class AppWindowBase(wx.Frame):
 
         self.sizer_right_pane = wx.BoxSizer(wx.VERTICAL)
 
-        sizer_9 = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_right_pane.Add(sizer_9, 0, wx.EXPAND, 0)
-
-        sizer_9.Add((20, 20), 1, wx.EXPAND, 0)
-
-        self.panel_active_workflow_buttons = wx.Panel(self.panel_2, wx.ID_ANY)
-        sizer_9.Add(self.panel_active_workflow_buttons, 0, wx.EXPAND, 0)
-
-        sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.btn_cancel = wx.Button(self.panel_active_workflow_buttons, wx.ID_ANY, "&Cancel task")
-        sizer_2.Add(self.btn_cancel, 0, 0, 8)
-
-        self.btn_done = wx.Button(self.panel_active_workflow_buttons, wx.ID_ANY, "&Done")
-        sizer_2.Add(self.btn_done, 0, wx.LEFT, 8)
-
-        self.panel_completed_workflow_buttons = wx.Panel(self.panel_2, wx.ID_ANY)
-        self.panel_completed_workflow_buttons.Hide()
-        sizer_9.Add(self.panel_completed_workflow_buttons, 0, wx.EXPAND, 0)
-
-        sizer_10 = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.btn_reopen = wx.Button(self.panel_completed_workflow_buttons, wx.ID_ANY, "&Reopen")
-        sizer_10.Add(self.btn_reopen, 0, 0, 0)
-
         sizer_3 = wx.BoxSizer(wx.VERTICAL)
         self.sizer_right_pane.Add(sizer_3, 1, wx.EXPAND, 0)
 
         self.edit_desc = wx.richtext.RichTextCtrl(self.panel_2, wx.ID_ANY)
-        sizer_3.Add(self.edit_desc, 1, wx.EXPAND | wx.TOP, 8)
+        sizer_3.Add(self.edit_desc, 1, wx.EXPAND, 8)
 
         self.panel_desc_buttons = wx.Panel(self.panel_2, wx.ID_ANY)
         self.panel_desc_buttons.Hide()
@@ -246,15 +240,15 @@ class AppWindowBase(wx.Frame):
 
         self.panel_desc_buttons.SetSizer(sizer_desc_buttons)
 
-        self.panel_completed_workflow_buttons.SetSizer(sizer_10)
-
-        self.panel_active_workflow_buttons.SetSizer(sizer_2)
-
         self.panel_2.SetSizer(self.sizer_right_pane)
 
         self.window_1_pane_2.SetSizer(sizer_4)
 
+        self.panel_active_grid_buttons.SetSizer(sizer_2)
+
         self.panel_active_tasks.SetSizer(sizer_8)
+
+        self.panel_done_grid_buttons.SetSizer(sizer_10)
 
         self.panel_done_tasks.SetSizer(sizer_7)
 
@@ -272,14 +266,14 @@ class AppWindowBase(wx.Frame):
         self.Bind(wx.EVT_SEARCHCTRL_CANCEL_BTN, self.OnEditSearchCancel, self.edit_search)
         self.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, self.OnEditSearchSeach, self.edit_search)
         self.Bind(wx.EVT_TEXT, self.OnEditSearchChange, self.edit_search)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnReopen, self.btn_reopen)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_done)
         self.Bind(wx.EVT_BUTTON, self.OnBtnNewTask, self.btn_new_task)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnCancel, self.btn_cancel)
+        self.Bind(wx.EVT_BUTTON, self.OnBtnDone, self.btn_done)
         self.Bind(wx.EVT_BUTTON, self.OnBtnActiveMore, self.btn_active_more)
         self.Bind(wx.grid.EVT_GRID_CMD_CELL_CHANGED, self.OnGridTasksCellChanged, self.grid_tasks)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_tasks)
-        self.Bind(wx.EVT_BUTTON, self.OnBtnCancel, self.btn_cancel)
-        self.Bind(wx.EVT_BUTTON, self.OnBtnDone, self.btn_done)
-        self.Bind(wx.EVT_BUTTON, self.OnBtnReopen, self.btn_reopen)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescDiscard, self.btn_desc_discard)
         self.Bind(wx.EVT_BUTTON, self.OnBtnDescSave, self.btn_desc_save)
         self.Bind(wx.adv.EVT_DATE_CHANGED, self.OnDateDeadlineChanged, self.date_deadline)
@@ -304,20 +298,16 @@ class AppWindowBase(wx.Frame):
         print("Event handler 'OnEditSearchChange' not implemented!")
         event.Skip()
 
+    def OnBtnReopen(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnReopen' not implemented!")
+        event.Skip()
+
     def OnGridTasksSelectCell(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnGridTasksSelectCell' not implemented!")
         event.Skip()
 
     def OnBtnNewTask(self, event):  # wxGlade: AppWindowBase.<event_handler>
         print("Event handler 'OnBtnNewTask' not implemented!")
-        event.Skip()
-
-    def OnBtnActiveMore(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'OnBtnActiveMore' not implemented!")
-        event.Skip()
-
-    def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'OnGridTasksCellChanged' not implemented!")
         event.Skip()
 
     def OnBtnCancel(self, event):  # wxGlade: AppWindowBase.<event_handler>
@@ -328,8 +318,12 @@ class AppWindowBase(wx.Frame):
         print("Event handler 'OnBtnDone' not implemented!")
         event.Skip()
 
-    def OnBtnReopen(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'OnBtnReopen' not implemented!")
+    def OnBtnActiveMore(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnBtnActiveMore' not implemented!")
+        event.Skip()
+
+    def OnGridTasksCellChanged(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnGridTasksCellChanged' not implemented!")
         event.Skip()
 
     def OnBtnDescDiscard(self, event):  # wxGlade: AppWindowBase.<event_handler>

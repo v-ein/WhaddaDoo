@@ -224,19 +224,16 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             outer_rect = wx.Rect(dc.GetTextExtent(text))
             outer_rect.Width += 2 * (self.HORZ_PADDING + self.HORZ_MARGIN)
             outer_rect.Height += 2 * (self.VERT_PADDING + self.VERT_MARGIN)
-            fits_right = (self.next_label_pos.x + outer_rect.Width <= self.cell_rect.Right)
-            fits_down = (self.next_label_pos.y + self.line_height + outer_rect.Height <= self.cell_rect.Bottom)
 
             # If we don't have space on the current line, *and* have space
             # below the current line, go to the next line, otherwise keep it
             # on the current line.
-            if fits_down and not fits_right:
+            if self.next_label_pos.x + outer_rect.Width > self.cell_rect.Right:
                 outer_rect.Offset(0, self.next_label_pos.y + self.line_height)
             else:
                 line_rect = wx.Rect(self.next_label_pos, wx.Size(0, self.line_height))
                 outer_rect.Offset(self.next_label_pos)
                 outer_rect.CenterIn(line_rect, wx.VERTICAL)
-                self.overflow = self.overflow or not fits_right
 
             label_rect = wx.Rect(outer_rect.TopLeft, outer_rect.BottomRight)
             label_rect.Deflate(self.HORZ_MARGIN, self.VERT_MARGIN)
@@ -342,6 +339,14 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             for label in task.labels:
                 label_renderer.DrawLabel(dc, label, wx.Colour(232, 232, 232), wx.Colour(0, 0, 0), True)
 
+
+TaskListDropEventType = wx.NewEventType()
+EVT_TASK_LIST_DROP = wx.PyEventBinder(TaskListDropEventType, 0)
+
+class TaskListDropEvent(wx.CommandEvent):
+    def __init__(self):
+        wx.Event.__init__(self, commandEventType = TaskListDropEventType)
+   
 
 class TaskList(wx.grid.Grid):
 
@@ -521,6 +526,10 @@ class TaskList(wx.grid.Grid):
             # (still need the 'else' branch here)
             if len(items) == 1:
                 self.SetGridCursor(index, 1)
+        
+        # TODO: maybe call ProcessEvent directly? does PostEvent use a queue? is it critical for us?
+        # TODO: maybe pass extra data like what items were dropped and where
+        wx.PostEvent(self.GetEventHandler(), TaskListDropEvent())
 
 
     def MoveDropPlaceholder(self, index):
