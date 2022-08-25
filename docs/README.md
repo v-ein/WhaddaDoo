@@ -1,6 +1,6 @@
 # About
 
-<img align="right" src="screenshot-w7-classic-thumb.png">
+[<img align="right" src="screenshot-w7-classic-thumb.png">](screenshot-w7-classic.png?raw=true)
 WhaddaDoo is a personal to-do list tool.
 
 - It is freeware.
