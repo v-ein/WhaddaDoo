@@ -4,6 +4,7 @@ Here's a list of known issues in the current version of WhaddaDoo. Please keep i
 - Filtering makes the right pane flicker. Probably related to the cursor/selection issue described above.
 - On drag'n'drop, the drop placeholder sometimes doesn't look right. For example, when dragging from 'Done' to 'Active', the placeholder has a different height. This might become irrelevant in the new upcoming version of drag'n'drop code.
 - On some systems, the background of the window is painted white, causing the list to visually merge into the window. Probably a wxWidgets issue.
+- On Windows 10 with the default gray theme, fonts and scale look weird.
 - For closed tasks, there's no way to scroll the description field in the right pane (when the description is too long to fit the field).
 - Alt+letter hotkeys don't work properly - seems to be a wxWidgets issue.
 - (!) The description field seems to be intermittently losing its default font for no apparent reason. This usually happens when the user interacts with the description box (by entering text or moving the focus), and usually doesn't happen when he navigates the list of tasks.
