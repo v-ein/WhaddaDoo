@@ -857,7 +857,7 @@ class AppWindow(AppWindowBase):
         self.FilterTasks("")
         event.Skip()
 
-    def OnEditSearchSeach(self, event: wx.CommandEvent) -> None:
+    def OnEditSearchSearch(self, event: wx.CommandEvent) -> None:
         self.FilterTasks(event.GetString())
         event.Skip()
 
