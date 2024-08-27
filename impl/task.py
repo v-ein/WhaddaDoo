@@ -1,6 +1,7 @@
 # Copyright © 2022 Vladimir Ein. All rights reserved.
 # License: http://opensource.org/licenses/MIT
 # 
+from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 import shlex
@@ -19,6 +20,7 @@ class TaskStatus(Enum):
         return dumper.represent_str(data.value)
 
 
+@dataclass
 class Epic:
     # Unlike Task objects, this ID is shown to the user, and is supposed to be
     # readable (to a certain extent).  It's auto-generated based off the epic
@@ -30,10 +32,6 @@ class Epic:
     name: str = ""
     # TODO: add a field for user-defined color (which we'll be using for labels
     # in the status cell)
-
-    def __init__(self, id: str = "", name: str = ""):
-        self.id = id
-        self.name = name
 
     @staticmethod
     def from_plain_object(id: str, obj: Dict) -> "Epic":
