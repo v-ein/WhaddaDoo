@@ -1,16 +1,17 @@
 # Copyright © 2022 Vladimir Ein. All rights reserved.
 # License: http://opensource.org/licenses/MIT
 # 
-from typing import List
+from typing import List, Optional
 import wx
 
 class CollapseButton(wx.StaticText):
 
-    buddies: List[wx.Window] = []
+    buddies: List[wx.Window]
     caption: str = ""
 
-    def __init__(self, *arg, **kw):
+    def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)
+        self.buddies = []
         self.caption = self.GetLabelText()
 
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
@@ -19,22 +20,22 @@ class CollapseButton(wx.StaticText):
         self.Bind(wx.EVT_SET_FOCUS, self.OnFocusEvent)
         self.Bind(wx.EVT_KILL_FOCUS, self.OnFocusEvent)
 
-    def SetBuddy(self, *buddy: wx.Window):
+    def SetBuddy(self, *buddy: wx.Window) -> None:
         self.buddies = list(buddy)
         self.SetLabel(self.caption)
 
-    def OnMouseUp(self, event):
+    def OnMouseUp(self, event: wx.Event) -> None:
         # Reversing the expanded state
         self.Expand(not self.buddies[0].IsShown())
         event.Skip()
         
-    def SetLabel(self, label, expanded=None):
+    def SetLabel(self, label: str, expanded: Optional[bool] = None) -> None:
         if expanded is None:
             expanded = self.buddies[0].IsShown()
         self.caption = label
         super().SetLabel(("\u25BC " if expanded else "\u25B6 ") + label)
 
-    def Expand(self, expand=True):
+    def Expand(self, expand: bool = True) -> None:
         for buddy in self.buddies:
             buddy.Show(expand)
         self.SetLabel(self.caption, expand)
@@ -43,14 +44,14 @@ class CollapseButton(wx.StaticText):
         for buddy in self.buddies:
             buddy.GetContainingSizer().Layout()
 
-    def AcceptsFocus(self):
+    def AcceptsFocus(self) -> bool:
         return True
 
-    def OnFocusEvent(self, event):
+    def OnFocusEvent(self, event: wx.Event) -> None:
         self.Refresh()
         event.Skip()        
 
-    def OnPaint(self, event):
+    def OnPaint(self, event: wx.Event) -> None:
         dc = wx.PaintDC(self)
         renderer = wx.RendererNative.Get()
         rect = self.GetClientRect()
@@ -64,7 +65,7 @@ class CollapseButton(wx.StaticText):
 
         # Erase the entire background area in case the text label is smaller
         # than the control itself.
-        dc.SetPen(wx.TRANSPARENT_PEN)
+        dc.SetPen(wx.TRANSPARENT_PEN)       # type: ignore[attr-defined]    # wx.TRANSPARENT_PEN is defined in wx/core.py
         dc.DrawRectangle(rect)
 
         # Now draw the label itself and its focus
@@ -72,7 +73,8 @@ class CollapseButton(wx.StaticText):
         if self.HasFocus():
             renderer.DrawFocusRect(self, dc, rect)
 
-    def OnKeyDown(self, event):
+    def OnKeyDown(self, event: wx.Event) -> None:
+        assert isinstance(event, wx.KeyEvent)   # for mypy
         # TODO: neither left/right nor Enter actually work. Fix this.
         if event.KeyCode == wx.WXK_LEFT or event.KeyCode == wx.WXK_RIGHT:
             self.Expand(event.KeyCode == wx.WXK_RIGHT)

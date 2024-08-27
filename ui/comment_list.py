@@ -1,27 +1,31 @@
 # Copyright © 2022 Vladimir Ein. All rights reserved.
 # License: http://opensource.org/licenses/MIT
 # 
+from typing import List
 import wx
+from wx.grid import GridCellAttr, GridCellAttrProvider, GridTableBase
 
-class CommentAttrProvider(wx.grid.GridCellAttrProvider):
-    date_attr = None
-    text_attr = None
+from impl.task import TaskComment
 
-    def __init__(self):
+class CommentAttrProvider(GridCellAttrProvider):
+    date_attr: GridCellAttr
+    text_attr: GridCellAttr
+
+    def __init__(self) -> None:
         super().__init__()
 
-        self.date_attr = wx.grid.GridCellAttr()
+        self.date_attr = GridCellAttr()
         # self.date_attr.BackgroundColour = wx.Colour(240, 240, 240)
         # TODO: it would be better to set it from the outside
         self.date_attr.Font = wx.Font(wx.Size(0, 12), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
         self.date_attr.SetAlignment(wx.ALIGN_RIGHT, wx.ALIGN_CENTER_VERTICAL)
         # self.date_attr.SetReadOnly()
 
-        self.text_attr = wx.grid.GridCellAttr()
+        self.text_attr = GridCellAttr()
         self.text_attr.Font = wx.Font(wx.Size(0, 14), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
 
 
-    def GetAttr(self, row, col, kind):
+    def GetAttr(self, row: int, col: int, kind: GridCellAttr.AttrKind) -> GridCellAttr:       # type: ignore[name-defined]
         if row %2 == 0:
             return self.date_attr.Clone()
         else:
@@ -31,32 +35,33 @@ class CommentAttrProvider(wx.grid.GridCellAttrProvider):
 # Surely a table backed up by a list of objects can be generalized... however,
 # the comment list uses two rows per list element. So maybe not.
 # But at least the notification methods can be moved to the superclass?
-class CommentTable(wx.grid.GridTableBase):
+class CommentTable(GridTableBase):
 
     # This list is not supposed to contain None values
-    comment_list = None
+    comment_list: List[TaskComment]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.comment_list = []
     
-    def GetNumberCols(self):
+    def GetNumberCols(self) -> int:
         return 2
 
-    def GetNumberRows(self):
+    def GetNumberRows(self) -> int:
         return 2 * len(self.comment_list)
 
-    def GetValue(self, row, col):
+    def GetValue(self, row: int, col: int) -> str:
         if col == 0:
             return ""
         comment = self.comment_list[row // 2]
         # For safety... e.g. an empty table
+        # TODO: in an empty table, we'll actually get an IndexError exception. Shall we check len(comment_list)?
         if comment is None:
             return ""
         return comment.text if row % 2 == 1 \
             else comment.date.isoformat(" ", "minutes")
 
-    def SetValue(self, row, col, value):
+    def SetValue(self, row: int, col: int, value: str) -> None:
         # The list is supposed to be read-only
         pass
         # if row % 2 == 1:
@@ -80,7 +85,7 @@ class CommentTable(wx.grid.GridTableBase):
 
     # TODO: finally decide on the naming style. Looks like we should be using wx naming
     # here, otherwise it really looks like crap.
-    def NotifyGrid(self, notification, pos, numRows):
+    def NotifyGrid(self, notification: int, pos: int, numRows: int) -> None:
         msg = wx.grid.GridTableMessage(self, notification, pos, numRows)
         self.GetView().ProcessTableMessage(msg)
 
@@ -105,13 +110,12 @@ class CommentTable(wx.grid.GridTableBase):
     #     self.task_list[pos:pos] = items
     #     self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, pos, len(items))
 
-    def AddNewComment(self, comment):
+    def AddNewComment(self, comment: TaskComment) -> None:
         row = self.GetNumberRows()
         self.comment_list.append(comment)
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, row, 2)
-        return comment
 
-    def SetList(self, new_list):
+    def SetList(self, new_list: List[TaskComment]) -> None:
         """
         Initializes the table with a new list, discarding all previous contents.
         Note: the list of comments is not copied, and **must not** be modified
@@ -133,11 +137,11 @@ class CommentTable(wx.grid.GridTableBase):
 
 class CommentList(wx.grid.Grid):
 
-    def __init__(self, *arg, **kw):
+    def __init__(self, *arg, **kw) -> None:
         super().__init__(*arg, **kw)
         self.SetTable(CommentTable(), takeOwnership=True)
 
-    def GetRowGridLinePen(self, row):
+    def GetRowGridLinePen(self, row: int) -> wx.Pen:
         if row % 2 == 0:
             return wx.Pen(wx.WHITE, 1, wx.SOLID)
         else:
