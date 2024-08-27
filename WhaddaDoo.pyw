@@ -102,6 +102,7 @@ class AppWindow(AppWindowBase):
 
     comment_attr_provider: CommentAttrProvider
 
+    persist_config: str = ""
     persist_mgr: persist.PersistenceManager
 
     def __init__(self, *args, **kwds) -> None:
@@ -241,8 +242,8 @@ class AppWindow(AppWindowBase):
 
         self.persist_mgr = persist.PersistenceManager.Get()
         # TODO: find a better place for this config file
-        config_file = os.path.join(os.getcwd(), "WhaddaDoo_UI.ini")
-        self.persist_mgr.SetPersistenceFile(config_file)
+        self.persist_config = os.path.join(os.getcwd(), "WhaddaDoo_UI.ini")
+        self.persist_mgr.SetPersistenceFile(self.persist_config)
         self.persist_mgr.Register(self, MSWTLWHandler)
         self.persist_mgr.Restore(self)
 
@@ -270,8 +271,12 @@ class AppWindow(AppWindowBase):
         self.SaveTaskChanges()
         self.SaveLabels()
         self.SaveBoard()
-        self.persist_mgr.SaveAndUnregister(self.splitter_main)
-        self.persist_mgr.SaveAndUnregister(self)
+
+        # If for some reason we can't store settings in the .ini file, we'd rather
+        # ignore it so that wxPython does not nag the user with an error message.
+        if os.access(self.persist_config, os.W_OK):
+            self.persist_mgr.SaveAndUnregister(self.splitter_main)
+            self.persist_mgr.SaveAndUnregister(self)
         event.Skip()
 
     def AskIfDiscardDescChanges(self) -> None:
