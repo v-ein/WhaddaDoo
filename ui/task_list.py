@@ -13,9 +13,9 @@ class TaskListTable(wx.grid.GridTableBase):
 
     # This list may contain elements set to None - e.g. to designate a 
     # placeholder for a new task, or a temporary cell
-    task_list: List[Task]
+    task_list: List[Optional[Task]]
     # A list of items actually displayed in the grid.
-    display_list: List[Task]
+    display_list: List[Optional[Task]]
     # Positions of the displayed items in the original list (i.e. `task_list`).
     display_index: List[int]
     last_filter: TaskFilter
@@ -45,13 +45,15 @@ class TaskListTable(wx.grid.GridTableBase):
         # We're using a custom renderer for column 0, and it needs the entire
         # task object.
         if col == 0:
-            return None if task == None else task
+            return task
 
-        return "" if task == None else task.summary
+        return task.summary if task else ""
 
     def SetValue(self, row: int, col: int, value: str) -> None:
         if col == 1:
-            self.display_list[row].summary = value
+            task = self.display_list[row]
+            if task:
+                task.summary = value
 
     def FindOrigTaskPos(self, pos: int) -> int:
         # Converts the position of a task in display_list to the corresponding
@@ -100,7 +102,7 @@ class TaskListTable(wx.grid.GridTableBase):
         msg = wx.grid.GridTableMessage(self, notification, pos, numRows)
         self.GetView().ProcessTableMessage(msg)
 
-    def GetList(self) -> List[Task]:
+    def GetList(self) -> List[Optional[Task]]:
         """
         Returns the internal list of tasks, e.g. for serialization purposes.
 
@@ -110,10 +112,10 @@ class TaskListTable(wx.grid.GridTableBase):
         """
         return self.task_list
 
-    def GetItem(self, row: int) -> Any:
+    def GetItem(self, row: int) -> Optional[Task]:
         return self.display_list[row]
 
-    def GetItems(self, start: int, end: int) -> List[Task]:
+    def GetItems(self, start: int, end: int) -> List[Optional[Task]]:
         return self.display_list[start:end]
 
     def InsertItems(self, pos: int, items: Sequence[Task]) -> None:
@@ -163,12 +165,10 @@ class TaskListTable(wx.grid.GridTableBase):
             filter = self.last_filter
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_DELETED, 0, len(self.display_list))
 
-        self.display_list = []
-        self.display_index = []
-        for pos, task in enumerate(self.task_list):
-            if filter.match(task):
-                self.display_list.append(task)
-                self.display_index.append(pos)
+        filtered = [ (pos, task) for pos, task in enumerate(self.task_list) if task is None or filter.match(task) ]
+        # We could have used zip(*filtered) but the code below reads better
+        self.display_list = [ task for pos, task in filtered ]
+        self.display_index = [ pos for pos, task in filtered ]
 
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, 0, len(self.display_list))
         # This really looks like a hack.  It would be better to handle this in
@@ -215,7 +215,7 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             self.line_height = first_line_height
             self.next_label_pos = cell_rect.TopLeft
 
-        def DrawLabel(self, dc: wx.DC, text: str, color: wx.Colour, backColor: wx.Colour, inverse: bool = False) -> None:
+        def DrawLabel(self, dc: wx.DC, text: str, color: wx.Colour, backColor: wx.Colour, inverse: bool = False) -> wx.Rect:
             """
             Draws a text label in a rounded rectangle, starting at the left boundary
             of the `rect` rectangle.  Returns the actual rectangle occupied by the
@@ -252,14 +252,14 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             dc.SetTextForeground(text_fore)
 
             dc.DrawRoundedRectangle(label_rect, self.CORNER_RADIUS)
-            dc.DrawText(text, label_rect.topLeft + (self.HORZ_PADDING, self.VERT_PADDING))
+            dc.DrawText(text, label_rect.TopLeft + wx.Size(self.HORZ_PADDING, self.VERT_PADDING))   # type: ignore[operator]
 
             # Note: we don't want to double the margin between the labels; however,
             # we still need to account for the right margin when fitting the label
             # onto the current line.  That's why we do use the right margin in
             # the above code, but we remove it before storing the position of
             # the next label.
-            self.next_label_pos = outer_rect.TopRight - (self.HORZ_MARGIN, 0)
+            self.next_label_pos = outer_rect.TopRight - wx.Size(self.HORZ_MARGIN, 0)    # type: ignore[operator]
             # TODO: better use the max among all the labels on the current line
             self.line_height = outer_rect.Height
 
@@ -284,7 +284,7 @@ class TaskStatusRenderer(wx.grid.GridCellStringRenderer):
             else wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNSHADOW))
 
         dc.SetBrush(wx.Brush(cell_back_col))
-        dc.SetPen(wx.TRANSPARENT_PEN)
+        dc.SetPen(wx.TRANSPARENT_PEN)   # type: ignore[attr-defined]    # wx.TRANSPARENT_PEN is initialized directly in wx.core
         dc.DrawRectangle(rect)
 
         # TODO: This looks like a dirty trick.  We should be using something like
@@ -356,6 +356,7 @@ class TaskList(wx.grid.Grid):
     # operation is the same wxGrid control.
     drop_placeholder_pos: Optional[int] = None
     drop_placeholder_attr: wx.grid.GridCellAttr
+    drop_ins_pos: Optional[int] = None
     drag_start_row: Optional[int] = None
 
     task_pool: Dict[str, Task]
@@ -376,16 +377,20 @@ class TaskList(wx.grid.Grid):
         self.drop_placeholder_attr.SetReadOnly()
         self.drop_placeholder_attr.SetBackgroundColour(wx.Colour(224, 224, 224))
 
-        self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.OnBeginDrag)
+        self.Bind(wx.grid.EVT_GRID_CELL_BEGIN_DRAG, self.OnBeginDrag)   # type: ignore[attr-defined]    # wx.grid.EVT_GRID_CELL_BEGIN_DRAG is initialized directly in wx.grid
         self.SetDropTarget(TaskListDropTarget(self))
 
 
     def SetTaskList(self, task_list: Sequence[Task], task_pool_: Dict[str, Task]) -> None:
         self.task_pool = task_pool_
-        self.GetTable().LoadList(task_list)
+        table = self.GetTable()
+        assert isinstance(table, TaskListTable)
+        table.LoadList(task_list)
 
     def Filter(self, filter: Optional[TaskFilter] = None) -> None:
-        self.Table.Filter(filter)
+        table = self.GetTable()
+        assert isinstance(table, TaskListTable)
+        table.Filter(filter)
         # self.AutoSizeRows()
 
     def GetColGridLinePen1(self, col: wx.Colour) -> wx.Pen:
@@ -405,7 +410,7 @@ class TaskList(wx.grid.Grid):
         # pen = wx.Pen(wx.Colour(255, 255, 255), 1, style=wx.PENSTYLE_TRANSPARENT)
         return pen
 
-    def OnBeginDrag(self, event: wx.Event) -> None:
+    def OnBeginDrag(self, event: wx.grid.GridEvent) -> None:
         """
         Put together a data object for drag-and-drop _from_ this list, and
         initiate the drag-and-drop operation.
@@ -416,12 +421,16 @@ class TaskList(wx.grid.Grid):
         sel_row_blocks = self.GetSelectedRowBlocks()
         if len(sel_row_blocks) == 0:
             cursor = self.GetGridCursorCoords()
-            sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]
+            sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]  # type: ignore[attr-defined]    # class GridBlockCoords is defined in wx/grid.pyi
 
-        items = []
         table = self.GetTable()
-        for block in sel_row_blocks:
-            items.extend([t.id for t in table.GetItems(block.GetTopRow(), block.GetBottomRow() + 1)])
+        assert isinstance(table, TaskListTable)
+        items = [
+            t.id
+            for block in sel_row_blocks
+            for t in table.GetItems(block.GetTopRow(), block.GetBottomRow() + 1)
+            if t is not None
+        ]
         drag_data["items"] = items
 
         # TODO: maybe use JSON instead of pickle for security reasons
@@ -443,7 +452,7 @@ class TaskList(wx.grid.Grid):
         # Create drop source and begin drag-and-drop.
         drag_source = wx.DropSource(self)
         drag_source.SetData(composite)
-        res = drag_source.DoDragDrop(flags=wx.Drag_DefaultMove)
+        res = drag_source.DoDragDrop(flags=wx.Drag_DefaultMove)     # type: ignore[attr-defined]    # wx.Drag_DefaultMove is defined in wx/core.pyi
         if res == wx.DragCopy or res == wx.DragMove:
             # If a move has been requested, we want to remove the source rows from this list.
             # For now, we always do a 'move' drag'n'drop. We might need a 'copy' method
@@ -457,7 +466,7 @@ class TaskList(wx.grid.Grid):
 
         self.drag_start_row = None
 
-    def DeleteDraggedItems(self, row_blocks: Sequence[wx.grid.GridBlockCoords], ins_pos: int = 0, ins_len: int = 0) -> None:
+    def DeleteDraggedItems(self, row_blocks: Sequence[wx.grid.GridBlockCoords], ins_pos: int = 0, ins_len: int = 0) -> None:    # type: ignore[name-defined]    # class GridBlockCoords is defined in wx/grid.pyi
         """
         Delete the specified rows from the list, correcting row positions
         as necessary for the drag-and-drop insertion that occurred earler.
@@ -488,14 +497,14 @@ class TaskList(wx.grid.Grid):
 
             self.GoToCell(cursor_row, self.GridCursorCol)
 
-    def PrepareItemsForDropping(self, ids: Sequence[str]) -> List[Optional[Task]]:
+    def PrepareItemsForDropping(self, ids: Sequence[str]) -> List[Task]:
         """
         Takes a list of IDs from the drop target and compiles a list of tasks
         to insert into the table.  Returns the resulting list of tasks.
         """
         # The simplest implementation just retrieves tasks from the task pool
         # by their IDs.
-        return [self.task_pool.get(id, None) for id in ids]
+        return [self.task_pool[id] for id in ids if id in self.task_pool]
 
     def InsertDroppedItemsAtPoint(self, x: int, y: int, items: Sequence[str]) -> None:
         """
@@ -521,7 +530,9 @@ class TaskList(wx.grid.Grid):
 
         with wx.grid.GridUpdateLocker(self):
             self.DeleteDropPlaceholder()
-            self.GetTable().InsertItems(index, self.PrepareItemsForDropping(items))
+            table = self.GetTable()
+            assert isinstance(table, TaskListTable)
+            table.InsertItems(index, self.PrepareItemsForDropping(items))
 
             for i in range(0, len(items)):
                 self.AutoSizeRow(index + i)
@@ -596,7 +607,7 @@ class TaskList(wx.grid.Grid):
         # further correction related to placeholder removal.
         # 
 
-        pt = self.CalcGridWindowUnscrolledPosition(wx.Point(x, y), None)
+        pt = self.CalcGridWindowUnscrolledPosition(wx.Point(x, y), None)    # type: ignore[func-returns-value]  # somehow wx stub contains an incorrect signature for CalcGridWindowUnscrolledPosition
 
         # See what row the y coord is pointing at
         index = self.YToRow(pt.y, clipToMinMax=True)
@@ -629,12 +640,16 @@ class TaskList(wx.grid.Grid):
             sel_row_blocks = self.GetSelectedRowBlocks()
             if len(sel_row_blocks) == 0:
                 cursor = self.GetGridCursorCoords()
-                sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]
+                sel_row_blocks = [wx.grid.GridBlockCoords(cursor.Row, cursor.Col, cursor.Row, cursor.Col)]      # type: ignore[attr-defined]    # class GridBlockCoords is defined in wx/grid.pyi
 
-            ids = []
             table = self.GetTable()
-            for block in sel_row_blocks:
-                ids.extend([t.id for t in table.GetItems(block.GetTopRow(), block.GetBottomRow() + 1)])
+            assert isinstance(table, TaskListTable)
+            ids = [
+                t.id
+                for block in sel_row_blocks
+                for t in table.GetItems(block.GetTopRow(), block.GetBottomRow() + 1)
+                if t is not None
+            ]
 
             orig_pos = sel_row_blocks[0].TopRow
             new_pos = orig_pos + offset
@@ -652,19 +667,20 @@ class TaskList(wx.grid.Grid):
 
 
 class ActiveTaskList(TaskList):
-    def PrepareItemsForDropping(self, ids: Sequence[str]) -> List[Optional[Task]]:
+    def PrepareItemsForDropping(self, ids: Sequence[str]) -> List[Task]:
         tasks_from_pool = super().PrepareItemsForDropping(ids)
         for task in tasks_from_pool:
-            task.set_status(TaskStatus.ACTIVE)
+            if task:
+                task.set_status(TaskStatus.ACTIVE)
         return tasks_from_pool
 
 
 class CompletedTaskList(TaskList):
-    def PrepareItemsForDropping(self, ids: Sequence[str]) -> List[Optional[Task]]:
+    def PrepareItemsForDropping(self, ids: Sequence[str]) -> List[Task]:
         tasks_from_pool = super().PrepareItemsForDropping(ids)
         for task in tasks_from_pool:
             # Only close if it comes from the 'active' list
-            if task.status == TaskStatus.ACTIVE:
+            if task and task.status == TaskStatus.ACTIVE:
                 task.set_status(TaskStatus.DONE)
         return tasks_from_pool
 
@@ -745,5 +761,5 @@ class TaskListDropTarget(wx.DropTarget):
         return defResult
 
     def OnLeave(self) -> None:
-        self.last_drag_point_y = None
+        self.last_drag_point_y = -1
         self.target_list.DeleteDropPlaceholder()

@@ -9,14 +9,15 @@ import tempfile
 import time
 from typing import Any, Dict, Optional, Sequence
 import wx
-import wx.lib.agw.persist as persist
+from wx.grid import Grid                # for brevity
+import wx.lib.agw.persist as persist    # type: ignore[import-untyped]
 import yaml
 from yaml import Dumper, Node
 
 from impl.task import Epic, Task, TaskComment, TaskFilter, TaskStatus
 from ui.app_gui import ActiveListMenuBase, AppWindowBase
 from ui.comment_list import CommentAttrProvider
-from ui.task_list import TaskListDropTarget, TaskStatusRenderer, EVT_TASK_LIST_DROP
+from ui.task_list import TaskListDropTarget, TaskListTable, TaskStatusRenderer, EVT_TASK_LIST_DROP
 
 # TODO: move to impl
 class NoAliasDumper(yaml.Dumper):
@@ -52,17 +53,19 @@ class MSWTLWHandler(persist.TLWHandler):
 
 
 class ActiveListMenu(ActiveListMenuBase):
-    def OnImportFromClipboard(self, event: wx.Event) -> None:  # wxGlade: ActiveListMenuBase.<event_handler>
+    def OnImportFromClipboard(self, event: wx.Event) -> None:
         if not wx.TheClipboard.IsOpened():
             data_obj = wx.TextDataObject()
             wx.TheClipboard.Open()
             success = wx.TheClipboard.GetData(data_obj)
             wx.TheClipboard.Close()
             if success:
+                assert isinstance(event.EventObject, wx.Menu)   # for mypy
                 event.EventObject.InvokingWindow.ImportPlainText(data_obj.GetText())
         event.Skip()
 
-    def OnImportFromFile(self, event: wx.Event) -> None:  # wxGlade: ActiveListMenuBase.<event_handler>
+    def OnImportFromFile(self, event: wx.Event) -> None:
+        assert isinstance(event.EventObject, wx.Menu)   # for mypy
         event.EventObject.InvokingWindow.ImportPlainTextFile()
         event.Skip()
 
@@ -97,6 +100,10 @@ class AppWindow(AppWindowBase):
     normal_pos: wx.Point
     normal_size: wx.Size
 
+    comment_attr_provider: CommentAttrProvider
+
+    persist_mgr: persist.PersistenceManager
+
     def __init__(self, *args, **kwds) -> None:
         AppWindowBase.__init__(self, *args, **kwds)
 
@@ -122,7 +129,7 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.SetDefaultEditor(wx.grid.GridCellAutoWrapStringEditor())
         self.grid_tasks.SetDefaultCellFont(self.font)
         self.grid_tasks.SetLabelFont(self.font)
-        self.grid_tasks.SetSelectionMode(wx.grid.Grid.GridSelectRows)
+        self.grid_tasks.SetSelectionMode(Grid.GridSelectionModes.GridSelectRows)    # type: ignore[attr-defined]
 
         read_only_cell_attr = wx.grid.GridCellAttr()
         read_only_cell_attr.SetReadOnly()
@@ -133,7 +140,7 @@ class AppWindow(AppWindowBase):
         # will break row auto-sizing in the 2nd column.  It's a bug in wxWidgets.
         # status_attr.SetFont(wx.Font(wx.Size(0, 10), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI"))
         self.grid_tasks.SetColAttr(0, status_attr.Clone())
-        self.grid_tasks.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
+        self.grid_tasks.SetTabBehaviour(Grid.TabBehaviour.Tab_Leave)      # type: ignore[attr-defined]
 
         self.grid_tasks.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_tasks.Bind(wx.EVT_CHAR, self.OnGridChar)
@@ -155,9 +162,9 @@ class AppWindow(AppWindowBase):
         # drag'n'drop. The task being dragged needs to be inserted at the top
         # of the list.
         self.grid_done.SetDropTarget(TaskListDropTarget(self.grid_done, 0))
-        self.grid_done.SetSelectionMode(wx.grid.Grid.GridSelectRows)
+        self.grid_done.SetSelectionMode(Grid.GridSelectionModes.GridSelectRows)   # type: ignore[attr-defined]
         self.grid_done.SetColAttr(0, status_attr)
-        self.grid_done.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
+        self.grid_done.SetTabBehaviour(Grid.TabBehaviour.Tab_Leave)   # type: ignore[attr-defined]
 
         self.grid_done.Bind(wx.EVT_SIZE, self.OnGridSize)
         self.grid_done.Bind(wx.EVT_KEY_DOWN, self.OnGridDoneKeyDown)
@@ -186,7 +193,7 @@ class AppWindow(AppWindowBase):
         # until the table gets destroyed (i.e. until the frame is closed).
         self.comment_attr_provider = CommentAttrProvider()
         self.grid_comments.Table.SetAttrProvider(self.comment_attr_provider)
-        self.grid_comments.SetTabBehaviour(wx.grid.Grid.TabBehaviour.Tab_Leave)
+        self.grid_comments.SetTabBehaviour(Grid.TabBehaviour.Tab_Leave)   # type: ignore[attr-defined]
 
         self.grid_comments.Bind(wx.EVT_SIZE, self.OnGridSize)
 
@@ -241,7 +248,7 @@ class AppWindow(AppWindowBase):
 
         self.grid_tasks.SetFocus()
 
-    def OnSize(self, event: wx.Event) -> None:
+    def OnSize(self, event: wx.SizeEvent) -> None:
         if not self.IsMaximized() and not self.IsIconized():
             self.normal_size = event.Size
         event.Skip()
@@ -274,11 +281,11 @@ class AppWindow(AppWindowBase):
         if result == wx.ID_OK:
             self.LoadTaskDesc()
 
-    def OnBtnDescDiscard(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnDescDiscard(self, event: wx.Event) -> None:
         self.AskIfDiscardDescChanges()
         event.Skip()
 
-    def OnBtnDescSave(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnDescSave(self, event: wx.Event) -> None:
         self.SaveTaskChanges()
         event.Skip()
 
@@ -287,12 +294,12 @@ class AppWindow(AppWindowBase):
             self.ShowDescButtons()
         event.Skip()
 
-    def OnEditDescKeyDown(self, event: wx.Event) -> None:
+    def OnEditDescKeyDown(self, event: wx.KeyEvent) -> None:
         # TODO: also unblock Alt+F4
         # TODO: make a subclass of richtextctrl and handle the tab key in that class
         if event.KeyCode == wx.WXK_TAB:
-            event.GetEventObject().Navigate(wx.NavigationKeyEvent.NavigationKeyEventFlags.FromTab + 
-                (0 if event.ShiftDown() else wx.NavigationKeyEvent.NavigationKeyEventFlags.IsForward))
+            event.GetEventObject().Navigate(wx.NavigationKeyEvent.NavigationKeyEventFlags.FromTab |     # type: ignore[attr-defined]
+                (0 if event.ShiftDown() else wx.NavigationKeyEvent.NavigationKeyEventFlags.IsForward))  # type: ignore[attr-defined]
         else:
             if self.panel_desc_buttons.Shown:
                 if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
@@ -305,7 +312,7 @@ class AppWindow(AppWindowBase):
     # and reduce code duplication here. Well, maybe it's not a good idea because
     # the description and the comments show the apply/cancel buttons on different
     # conditions.
-    def OnEditCommentKeyDown(self, event: wx.Event) -> None:
+    def OnEditCommentKeyDown(self, event: wx.KeyEvent) -> None:
         if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
             really_cancel = (self.edit_comment.Value == "")
             if not really_cancel:
@@ -321,7 +328,7 @@ class AppWindow(AppWindowBase):
 
         event.Skip()
 
-    def OnGridChar(self, event: wx.Event) -> None:
+    def OnGridChar(self, event: wx.KeyEvent) -> None:
         if event.KeyCode == wx.WXK_INSERT and not event.HasAnyModifiers():
             # If the table is empty, GridCursorRow might well be -1, and we
             # can't insert items at -1.  That's why we limit it at 0.
@@ -329,7 +336,7 @@ class AppWindow(AppWindowBase):
 
         event.Skip()
 
-    def OnGridDoneKeyDown(self, event: wx.Event) -> None:
+    def OnGridDoneKeyDown(self, event: wx.KeyEvent) -> None:
         if event.KeyCode == wx.WXK_ESCAPE:
             self.edit_search.Clear()
             self.FilterTasks("")
@@ -338,7 +345,7 @@ class AppWindow(AppWindowBase):
         else:
             event.Skip()
 
-    def OnGridTasksKeyDown(self, event: wx.Event) -> None:
+    def OnGridTasksKeyDown(self, event: wx.KeyEvent) -> None:
         if event.GetModifiers() == wx.MOD_CONTROL and \
             (event.KeyCode == wx.WXK_UP or event.KeyCode == wx.WXK_DOWN):
 
@@ -364,9 +371,10 @@ class AppWindow(AppWindowBase):
         else:
             event.Skip()
 
-    def OnGridTasksSelectCell(self, event: wx.Event) -> None:
+    def OnGridTasksSelectCell(self, event: wx.grid.GridEvent) -> None:
         # This handler is used for both grid_tasks and grid_done
         grid = event.GetEventObject()
+        assert isinstance(grid, Grid)   # for mypy
         if event.GetCol() == 0:
             grid.SetGridCursor(event.GetRow(), 1)
             # Note: we deliberately disallow the grid to handle this event, otherwise
@@ -378,7 +386,9 @@ class AppWindow(AppWindowBase):
             self.SaveLabels()
             self.selected_task_row = event.GetRow()
             try:
-                self.selected_task = grid.GetTable().GetItem(self.selected_task_row)
+                table = grid.GetTable()
+                assert isinstance(table, TaskListTable)
+                self.selected_task = table.GetItem(self.selected_task_row)
             except IndexError:
                 # Sometimes we might go out of range, e.g. when the table is empty
                 self.selected_task = None
@@ -387,9 +397,11 @@ class AppWindow(AppWindowBase):
 
     # TODO: as soon as the bug in wxWidgets that breaks row auto-sizing gets
     # fixed, remove this handler (and remove column 0).
-    def OnGridCommentsSelectCell(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnGridCommentsSelectCell(self, event: wx.grid.GridEvent) -> None:
         if event.GetCol() == 0:
-            event.GetEventObject().SetGridCursor(event.GetRow(), 1)
+            grid = event.GetEventObject()
+            assert isinstance(grid, Grid)   # for mypy
+            grid.SetGridCursor(event.GetRow(), 1)
             # Note: we deliberately disallow the grid to handle this event, otherwise
             # it will reset the position to column 0 even after our SetGridCursor call.
             event.Veto()
@@ -457,9 +469,9 @@ class AppWindow(AppWindowBase):
         self.edit_desc.Enabled = is_active
 
         self.label_created.LabelText = task.creation_date.isoformat(" ", "minutes")
-        has_close_date = task.close_date is not None
+        has_close_date = (task.close_date is not None)
         if has_close_date:
-            self.label_closed.LabelText = task.close_date.isoformat(" ", "minutes")
+            self.label_closed.LabelText = task.close_date.isoformat(" ", "minutes")     # type: ignore[union-attr]  # somehow mypy doesn't understand the "if" above
         self.panel_closed_date.Show(has_close_date)
         self.panel_closed_date.ContainingSizer.Layout()
 
@@ -470,7 +482,7 @@ class AppWindow(AppWindowBase):
             # the checkbox, this value will be selected by default.
             self.date_deadline.Value = wx.DateTime.Today().Add(wx.DateSpan(days = 1))
             # Now set it to a null date in order to uncheck the checkbox.
-            self.date_deadline.Value = wx.DefaultDateTime
+            self.date_deadline.Value = wx.DefaultDateTime   # type: ignore[attr-defined]    # wx.DefaultDateTime is defined in wx/corel.pyi
         else:
             d = task.deadline
             self.date_deadline.Value = wx.DateTime.FromDMY(d.day, d.month - 1, d.year)
@@ -488,20 +500,23 @@ class AppWindow(AppWindowBase):
         self.grid_comments.AutoSizeRows()
         # TODO: fill in the remaining controls
 
-    def OnDateDeadlineChanged(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnDateDeadlineChanged(self, event: wx.Event) -> None:
         if self.selected_task is not None:
             self.HandleBoardChange()
-            dt = event.GetEventObject().Value
+            date_picker = event.GetEventObject()
+            assert isinstance(date_picker, wx.adv.DatePickerCtrl)    # for mypy
+            dt = date_picker.Value
             self.selected_task.deadline = date(dt.year, dt.month + 1, dt.day) if dt.IsValid() \
                 else None
             # TODO: only repaint the current task, and ideally only the status cell
             self.grid_tasks.ForceRefresh()
         event.Skip()
 
-    def OnComboEpicChanged(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnComboEpicChanged(self, event: wx.Event) -> None:
         if self.selected_task is not None:
             self.HandleBoardChange()
             combo = event.GetEventObject()
+            assert isinstance(combo, wx.ComboBox)   # for mypy
             sel_epic_id = combo.GetClientData(combo.GetSelection())
             self.selected_task.epic = self.epics_pool[sel_epic_id] if sel_epic_id is not None \
                 else None
@@ -523,11 +538,11 @@ class AppWindow(AppWindowBase):
         self.SaveLabels()
         event.Skip()
 
-    def OnEditLabelsTextEnter(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnEditLabelsTextEnter(self, event: wx.Event) -> None:
         self.SaveLabels()
         event.Skip()
 
-    def ResizeGridColumns(self, grid: wx.grid.Grid) -> None:
+    def ResizeGridColumns(self, grid: Grid) -> None:
         #
         # Resizes the last column in the grid to fit the client area, 
         # if possible. Then, auto-sizes all the rows because the change to
@@ -545,17 +560,19 @@ class AppWindow(AppWindowBase):
         grid.AutoSizeRows()
 
     def OnGridSize(self, event: wx.Event) -> None:
-        self.ResizeGridColumns(event.GetEventObject())
+        grid = event.GetEventObject()
+        assert isinstance(grid, Grid)   # for mypy
+        self.ResizeGridColumns(grid)
         event.Skip()
 
-    def OnGridTasksCellChanged(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnGridTasksCellChanged(self, event: wx.grid.GridEvent) -> None:
         self.HandleBoardChange()
         self.grid_tasks.AutoSizeRow(event.GetRow())
         # We need to reload the description box on the right side.
         self.LoadTaskDetails()
         event.Skip()
         
-    def OnFrameShow(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnFrameShow(self, event: wx.Event) -> None:
         self.ResizeGridColumns(self.grid_tasks)
         self.ResizeGridColumns(self.grid_done)
         self.ResizeGridColumns(self.grid_comments)
@@ -620,7 +637,8 @@ class AppWindow(AppWindowBase):
                 encoding='utf8', prefix="active.", suffix=".txt") as f:
 
                 for task in self.grid_tasks.GetTable().GetList():
-                    f.write(task.id + "\n")
+                    if task:            # ignoring None values
+                        f.write(task.id + "\n")
                 # Keep it for future reference
                 index_file_name = f.name
 
@@ -657,12 +675,8 @@ class AppWindow(AppWindowBase):
         # list, and therefore can't rely on the native sorting provided by 
         # ComboBox itself.
         self.combo_epic.Append("", None)
-        # for (id, epic) in sorted(self.epics_pool.items(), key=lambda item: item[1].name):
-        #     self.combo_epic.Append(epic.name, id)
         for epic in sorted(self.epics_pool.values(), key=lambda epic: epic.name):
             self.combo_epic.Append(epic.name, epic.id)
-        # Adding the 'no epic' item to the pool, too.  Can't do it earlier.
-        self.epics_pool[None] = Epic()
 
         # TODO: sort tasks by completion date, newer to older
         self.grid_done.SetTaskList(completed_tasks, self.tasks_pool)
@@ -774,19 +788,19 @@ class AppWindow(AppWindowBase):
         self.grid_tasks.SetGridCursor(row, 1)
         self.grid_tasks.EnableCellEditControl()
 
-    def OnBtnCancel(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnCancel(self, event: wx.Event) -> None:
         self.MarkCompleted(TaskStatus.CANCELLED)
         event.Skip()
 
-    def OnBtnDone(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnDone(self, event: wx.Event) -> None:
         self.MarkCompleted()
         event.Skip()
 
-    def OnBtnReopen(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnReopen(self, event: wx.Event) -> None:
         self.ReopenTask()
         event.Skip()
 
-    def OnBtnNewTask(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnNewTask(self, event: wx.Event) -> None:
         if not self.grid_tasks.IsShown():
             self.label_active.Expand()
         self.InsertNewTask(0)
@@ -798,7 +812,7 @@ class AppWindow(AppWindowBase):
         self.panel_comment_edit_buttons.Show(show)
         self.edit_comment.ContainingSizer.Layout()
 
-    def OnBtnComment(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnComment(self, event: wx.Event) -> None:
         if self.selected_task is None:
             event.Skip()
             return
@@ -812,7 +826,7 @@ class AppWindow(AppWindowBase):
         # self.selected_task.comments.append()
         event.Skip()
 
-    def OnBtnCommentCancel(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnCommentCancel(self, event: wx.Event) -> None:
         # Just hiding the editor and doing nothing else.
         self.ShowCommentEditor(False)
         event.Skip()
@@ -830,7 +844,7 @@ class AppWindow(AppWindowBase):
         self.grid_comments.GoToCell(last_row, 0)
         self.grid_comments.SetFocus()
 
-    def OnBtnCommentSave(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnCommentSave(self, event: wx.Event) -> None:
         self.AddNewComment()
         event.Skip()
 
@@ -839,27 +853,30 @@ class AppWindow(AppWindowBase):
         self.grid_done.Filter(TaskFilter(query))
         self.grid_tasks.Filter(TaskFilter(query))
 
-    def OnEditSearchCancel(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnEditSearchCancel(self, event: wx.Event) -> None:
         self.FilterTasks("")
         event.Skip()
 
-    def OnEditSearchSeach(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnEditSearchSeach(self, event: wx.CommandEvent) -> None:
         self.FilterTasks(event.GetString())
         event.Skip()
 
-    def OnEditSearchChange(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnEditSearchChange(self, event: wx.Event) -> None:
         self.search_timer.StartOnce(self.SEARCH_DELAY)
         event.Skip()
 
-    def OnEditSearchChar(self, event: wx.Event) -> None:
+    def OnEditSearchChar(self, event: wx.KeyEvent) -> None:
+        search_ctrl = event.GetEventObject()
+        assert isinstance(search_ctrl, wx.TextCtrl)   # for mypy
+
         # We need some special handling for Esc and Enter
         if event.KeyCode == wx.WXK_ESCAPE and not event.HasAnyModifiers():
             # TODO: prevent double filtering (first call here and then another
             # call on timer set up in OnEditSearchChange)
-            event.GetEventObject().Clear()
+            search_ctrl.Clear()
             self.FilterTasks("")
         elif event.KeyCode == wx.WXK_RETURN and not event.HasAnyModifiers():
-            self.FilterTasks(event.GetEventObject().Value)
+            self.FilterTasks(search_ctrl.Value)
 
         event.Skip()
 
@@ -867,7 +884,7 @@ class AppWindow(AppWindowBase):
         self.FilterTasks(self.edit_search.Value)
         event.Skip()
 
-    def OnBtnActiveMore(self, event: wx.Event) -> None:  # wxGlade: AppWindowBase.<event_handler>
+    def OnBtnActiveMore(self, event: wx.Event) -> None:
         menu_bar = ActiveListMenu()
         # TODO: disable the 'import from clipboard' item if the clipboard
         # contents is not suitable
@@ -910,6 +927,7 @@ class AppWindow(AppWindowBase):
     def ImportPlainTextFile(self) -> None:
         with wx.FileDialog(self, "Import tasks", wildcard="Text files (*.txt)|*.txt|All files (*.*)|*.*",
                        style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+            assert fileDialog is not None   # not clear why mypy thinks it can be None here
             if fileDialog.ShowModal() != wx.ID_CANCEL:
                 try:
                     with open(fileDialog.GetPath(), "r") as f:
@@ -940,7 +958,9 @@ class AppWindow(AppWindowBase):
 
 
 class MyApp(wx.App):
-    def OnInit(self) -> None:
+    frame: AppWindow
+
+    def OnInit(self) -> bool:
         yaml.add_representer(Task, Task.yaml_representer)
         yaml.add_representer(TaskStatus, TaskStatus.yaml_representer)
         yaml.add_representer(TaskComment, TaskComment.yaml_representer)

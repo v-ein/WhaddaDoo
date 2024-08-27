@@ -65,7 +65,7 @@ class CollapseButton(wx.StaticText):
 
         # Erase the entire background area in case the text label is smaller
         # than the control itself.
-        dc.SetPen(wx.TRANSPARENT_PEN)
+        dc.SetPen(wx.TRANSPARENT_PEN)       # type: ignore[attr-defined]    # wx.TRANSPARENT_PEN is defined in wx/core.py
         dc.DrawRectangle(rect)
 
         # Now draw the label itself and its focus
@@ -74,6 +74,7 @@ class CollapseButton(wx.StaticText):
             renderer.DrawFocusRect(self, dc, rect)
 
     def OnKeyDown(self, event: wx.Event) -> None:
+        assert isinstance(event, wx.KeyEvent)   # for mypy
         # TODO: neither left/right nor Enter actually work. Fix this.
         if event.KeyCode == wx.WXK_LEFT or event.KeyCode == wx.WXK_RIGHT:
             self.Expand(event.KeyCode == wx.WXK_RIGHT)

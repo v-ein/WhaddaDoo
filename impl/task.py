@@ -47,7 +47,7 @@ class Epic:
 
 
 class TaskComment:
-    date: Optional[datetime] = None
+    date: datetime
     text: str = ""
 
     def __init__(self, text_: str, date_: Optional[datetime] = None):

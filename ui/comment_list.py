@@ -25,7 +25,7 @@ class CommentAttrProvider(GridCellAttrProvider):
         self.text_attr.Font = wx.Font(wx.Size(0, 14), wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, faceName = "Segoe UI")
 
 
-    def GetAttr(self, row: int, col: int, kind: GridCellAttr.wxAttrKind) -> GridCellAttr:
+    def GetAttr(self, row: int, col: int, kind: GridCellAttr.AttrKind) -> GridCellAttr:       # type: ignore[name-defined]
         if row %2 == 0:
             return self.date_attr.Clone()
         else:
@@ -114,7 +114,6 @@ class CommentTable(GridTableBase):
         row = self.GetNumberRows()
         self.comment_list.append(comment)
         self.NotifyGrid(wx.grid.GRIDTABLE_NOTIFY_ROWS_INSERTED, row, 2)
-        return comment
 
     def SetList(self, new_list: List[TaskComment]) -> None:
         """
