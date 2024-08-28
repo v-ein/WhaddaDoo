@@ -264,7 +264,7 @@ class AppWindowBase(wx.Frame):
         self.Centre()
 
         self.Bind(wx.EVT_SEARCHCTRL_CANCEL_BTN, self.OnEditSearchCancel, self.edit_search)
-        self.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, self.OnEditSearchSeach, self.edit_search)
+        self.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, self.OnEditSearchSearch, self.edit_search)
         self.Bind(wx.EVT_TEXT, self.OnEditSearchChange, self.edit_search)
         self.Bind(wx.EVT_BUTTON, self.OnBtnReopen, self.btn_reopen)
         self.Bind(wx.grid.EVT_GRID_CMD_SELECT_CELL, self.OnGridTasksSelectCell, self.grid_done)
@@ -290,8 +290,8 @@ class AppWindowBase(wx.Frame):
         print("Event handler 'OnEditSearchCancel' not implemented!")
         event.Skip()
 
-    def OnEditSearchSeach(self, event):  # wxGlade: AppWindowBase.<event_handler>
-        print("Event handler 'OnEditSearchSeach' not implemented!")
+    def OnEditSearchSearch(self, event):  # wxGlade: AppWindowBase.<event_handler>
+        print("Event handler 'OnEditSearchSearch' not implemented!")
         event.Skip()
 
     def OnEditSearchChange(self, event):  # wxGlade: AppWindowBase.<event_handler>

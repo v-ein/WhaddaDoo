@@ -1,10 +1,13 @@
 # Copyright © 2022 Vladimir Ein. All rights reserved.
 # License: http://opensource.org/licenses/MIT
 # 
-import datetime
+from dataclasses import dataclass
+from datetime import date, datetime
 from enum import Enum
 import shlex
 import time
+from typing import Any, Dict, List, Optional
+from yaml import Dumper, Node
 
 
 class TaskStatus(Enum):
@@ -13,10 +16,11 @@ class TaskStatus(Enum):
     CANCELLED = "cancelled"
 
     @staticmethod
-    def yaml_representer(dumper, data):
+    def yaml_representer(dumper: Dumper, data: "TaskStatus") -> Node:
         return dumper.represent_str(data.value)
 
 
+@dataclass
 class Epic:
     # Unlike Task objects, this ID is shown to the user, and is supposed to be
     # readable (to a certain extent).  It's auto-generated based off the epic
@@ -24,17 +28,13 @@ class Epic:
     # Note: even though we store epics in a dict by their ID and could use that
     # dict's keys to exclusively store IDs, this makes it difficult to map Epics
     # back to IDs.  That's why we also store the ID inside the Epic object.
-    id = ""
-    name = ""
+    id: str = ""
+    name: str = ""
     # TODO: add a field for user-defined color (which we'll be using for labels
     # in the status cell)
 
-    def __init__(self, id="", name=""):
-        self.id = id
-        self.name = name
-
     @staticmethod
-    def from_plain_object(id, obj):
+    def from_plain_object(id: str, obj: Dict) -> "Epic":
         """
         Construct an epic based off a plain object read from YAML.
 
@@ -45,15 +45,15 @@ class Epic:
 
 
 class TaskComment:
-    date: datetime = None
+    date: datetime
     text: str = ""
 
-    def __init__(self, text_, date_ = None):
+    def __init__(self, text_: str, date_: Optional[datetime] = None):
         self.text = text_
-        self.date = date_ if date_ is not None else datetime.datetime.now()
+        self.date = date_ if date_ is not None else datetime.now()
 
     @staticmethod
-    def yaml_representer(dumper, data):
+    def yaml_representer(dumper: Dumper, data: "TaskComment") -> Node:
         filtered = {
             "date": data.date,
             "text": data.text
@@ -61,12 +61,13 @@ class TaskComment:
         return dumper.represent_mapping('tag:yaml.org,2002:map', filtered)
 
 
-_ID_BASE_TIMESTAMP = datetime.datetime(2022, 1, 1).timestamp()
+_ID_BASE_TIMESTAMP = datetime(2022, 1, 1).timestamp()
 _ID_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz"
+
 
 class Task:
 
-    id: str = None
+    id: str = ""
     status: TaskStatus = TaskStatus.ACTIVE
 
     # For convenience, we store the first line of the description separately,
@@ -76,24 +77,24 @@ class Task:
     # TODO: do we need to annotate the type on simple types like string?
     summary: str = ""
     desc: str = ""
-    comments = None
+    comments: List[TaskComment]
     # TODO: decide on data type here. Do we want to include time? timezone?
-    deadline: datetime.date = None
-    epic: Epic = None
-    labels = None
-    creation_date: datetime.datetime = None
-    close_date: datetime.datetime = None
+    deadline: Optional[date] = None
+    epic: Optional[Epic] = None
+    labels: List[str]
+    creation_date: datetime
+    close_date: Optional[datetime] = None
     # TODO: think if we need the 'reopened' flag
 
-    def __init__(self, summary="", desc=""):
+    def __init__(self, summary: str = "", desc: str = "") -> None:
         self.gen_id()
-        self.creation_date = datetime.datetime.now()
+        self.creation_date = datetime.now()
         self.comments = []
         self.labels = []
         self.summary = summary
         self.desc = desc
 
-    def gen_id(self):
+    def gen_id(self) -> str:
         """
         Generates an ID for this task based off the current date and time.
         Since the tasks are typically created manually, timestamp-based IDs
@@ -105,7 +106,7 @@ class Task:
         ts = int((time.time() - _ID_BASE_TIMESTAMP) * 100)
         return self.set_numeric_id(ts)
 
-    def set_numeric_id(self, num_id):
+    def set_numeric_id(self, num_id: int) -> str:
         """
         Converts `num_id` to text representation (as a base-36 number) and
         assigns it to this Task object. Returns the string ID.
@@ -131,19 +132,19 @@ class Task:
 
         return text_id
 
-    def get_full_desc(self):
+    def get_full_desc(self) -> str:
         return self.summary + ("\n" + self.desc if self.desc else "")
 
     # TODO: not sure if we really need this. A static method that returns 
     # a tuple might be more useful.
-    def set_full_desc(self, desc):
+    def set_full_desc(self, desc: str) -> None:
         paragraphs = desc.split("\n")
         self.summary = paragraphs[0]
         self.desc = "\n".join(paragraphs[1:])
 
 
     @staticmethod
-    def yaml_representer(dumper, data):
+    def yaml_representer(dumper: Dumper, data: "Task") -> Node:
         # Note: the order of keywords *does matter*. They will be written
         # to YAML in this order.
         filtered = {
@@ -163,21 +164,25 @@ class Task:
         return dumper.represent_mapping('tag:yaml.org,2002:map', filtered)
 
     @staticmethod
-    def datetime_from_yaml(value):
-        if type(value) is str:
-            value = datetime.datetime.fromisoformat(value)
-        return value if type(value) is datetime.datetime \
-            else None
+    def datetime_from_yaml(value: Any) -> Optional[datetime]:
+        if isinstance(value, str):
+            return datetime.fromisoformat(value)
+        if isinstance(value, datetime):
+            return value
+        # TODO: raise an exception?
+        return None
 
     @staticmethod
-    def date_from_yaml(value):
-        if type(value) is str:
-            value = datetime.date.fromisoformat(value)
-        return value if type(value) is datetime.date \
-            else None
+    def date_from_yaml(value: Any) -> Optional[date]:
+        if isinstance(value, str):
+            return date.fromisoformat(value)
+        if isinstance(value, date):
+            return value
+        # TODO: raise an exception?
+        return None
 
     @staticmethod
-    def from_plain_object(id, obj, epics):
+    def from_plain_object(id: str, obj: Dict, epics: Dict[str, Epic]) -> "Task":
         """
         Construct a task based off a plain object read from YAML.
 
@@ -205,29 +210,29 @@ class Task:
             # TODO: make sure it's a list
             for c in obj["comments"]:
                 if "text" in c and "date" in c:
-                    d = Task.datetime_from_yaml(c["date"])
-                    if d is not None:
-                        task.comments.append(TaskComment(c["text"], d))
+                    dt = Task.datetime_from_yaml(c["date"])
+                    if dt is not None:
+                        task.comments.append(TaskComment(c["text"], dt))
         if "labels" in obj:
             # TODO: make sure it's a string
             task.labels = sorted(obj["labels"].split())
 
         # TODO: surely it can be simplified. And less copy-paste, please.
         if "created" in obj:
-            d = Task.datetime_from_yaml(obj["created"])
-            if d is not None:
-                task.creation_date = d
+            dt = Task.datetime_from_yaml(obj["created"])
+            if dt is not None:
+                task.creation_date = dt
         if "closed" in obj:
-            d = Task.datetime_from_yaml(obj["closed"])
-            if d is not None:
-                task.close_date = d
+            dt = Task.datetime_from_yaml(obj["closed"])
+            if dt is not None:
+                task.close_date = dt
         if "deadline" in obj:
             d = Task.date_from_yaml(obj["deadline"])
             if d is not None:
                 task.deadline = d
         return task
     
-    def set_status(self, new_status):
+    def set_status(self, new_status: TaskStatus) -> None:
         if self.status != new_status:
             if new_status == TaskStatus.ACTIVE:
                 # Going from inactive to active means reopen
@@ -235,20 +240,20 @@ class Task:
                 # TODO: add a comment containing the reopen date
             else:
                 # Going from active to something else: either done or cancel
-                self.close_date = datetime.datetime.now()
+                self.close_date = datetime.now()
 
             self.status = new_status
 
 
 class TaskFilter:
-    always_pass = False
+    always_pass: bool
     # Words are stored in lower case in order to perform case-insensitive search
-    words = None
-    exact_phrases = None
-    epic = ""
-    labels = None
+    words: List[str]
+    exact_phrases: List[str]
+    epic: str = ""
+    labels: List[str]
 
-    def __init__(self, query=""):
+    def __init__(self, query: str = "") -> None:
         self.always_pass = (query == "")
         # Query syntax:
         #   epic:<epicname> or e:epicname
@@ -281,7 +286,7 @@ class TaskFilter:
                 if not handled:
                     self.words.append(word)
 
-    def _text_match(self, text):
+    def _text_match(self, text: str) -> bool:
         lcase_text = text.lower()
         for phrase in self.exact_phrases:
             if phrase not in lcase_text:
@@ -301,7 +306,7 @@ class TaskFilter:
 
         return True
 
-    def match(self, task):
+    def match(self, task: Task) -> bool:
         if self.always_pass:
             return True
 
